@@ -168,8 +168,8 @@ export const AdminPortal: React.FC = () => {
   // Login Screen if unauthenticated
   if (!isAuthenticated) {
     return (
-      <div className="max-w-md mx-auto px-4 py-12 sm:py-16">
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl text-center">
+      <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center px-4 py-8 sm:py-12">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl text-center max-w-md w-full animate-in zoom-in-95">
           <div className="w-13 h-13 sm:w-14 sm:h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-xs">
             <Lock className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
