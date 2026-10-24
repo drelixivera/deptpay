@@ -8,4 +8,16 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('@supabase')) {
+            return 'vendor-supabase';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
 })

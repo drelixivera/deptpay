@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Navbar } from './components/Navbar';
 import { StudentPortal } from './components/StudentPortal';
-import { AdminPortal } from './components/AdminPortal';
 import { isSupabaseConfigured } from './lib/supabase';
+
+const AdminPortal = lazy(() => import('./components/AdminPortal').then(m => ({ default: m.AdminPortal })));
 
 export function App() {
   const [currentView, setCurrentView] = useState<'student' | 'admin'>('student');
@@ -26,7 +27,17 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 pb-16">
-        {currentView === 'student' ? <StudentPortal /> : <AdminPortal />}
+        {currentView === 'student' ? (
+          <StudentPortal />
+        ) : (
+          <Suspense fallback={
+            <div className="min-h-[60vh] flex items-center justify-center text-xs text-slate-400">
+              <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          }>
+            <AdminPortal />
+          </Suspense>
+        )}
       </main>
 
       {/* University & Departmental Footer */}

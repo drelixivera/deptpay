@@ -15,7 +15,6 @@ import {
   Receipt,
   FileCheck2
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import type { Campaign, Submission } from '../types';
 import { getCampaigns, submitReceipt, getSubmissionsByMatric } from '../lib/api';
 
@@ -115,11 +114,13 @@ export const StudentPortal: React.FC = () => {
       );
 
       setSubmittedSuccess(result);
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.6 }
-      });
+      import('canvas-confetti').then((module) => {
+        module.default({
+          particleCount: 80,
+          spread: 60,
+          origin: { y: 0.6 }
+        });
+      }).catch(() => {});
       // Clear form
       setFullName('');
       setMatricNumber('');

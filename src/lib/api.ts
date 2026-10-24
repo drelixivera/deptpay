@@ -1,7 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { Campaign, Submission, SubmissionStatus } from '../types';
 import { INITIAL_CAMPAIGNS, INITIAL_SUBMISSIONS } from './mockData';
-import imageCompression from 'browser-image-compression';
 
 const LOCAL_STORAGE_KEY_CAMPAIGNS = 'deptpay_campaigns_v1';
 const LOCAL_STORAGE_KEY_SUBMISSIONS = 'deptpay_submissions_v1';
@@ -169,6 +168,7 @@ export async function submitReceipt(
   };
   let compressedFile = receiptFile;
   try {
+    const imageCompression = (await import('browser-image-compression')).default;
     compressedFile = await imageCompression(receiptFile, options);
   } catch (err) {
     console.warn('Image compression skipped, uploading original:', err);

@@ -1,7 +1,9 @@
-import * as XLSX from 'xlsx';
 import type { Submission } from '../types';
 
-export function exportSubmissionsToExcel(submissions: Submission[], campaignTitle: string) {
+export async function exportSubmissionsToExcel(submissions: Submission[], campaignTitle: string) {
+  // Dynamically load XLSX only when the user clicks the export button
+  const XLSX = await import('xlsx');
+
   // Filter to approved or current view
   const formattedData = submissions.map((sub, index) => ({
     'S/N': index + 1,
