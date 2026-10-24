@@ -10,7 +10,8 @@ import {
   Wallet, 
   LogOut, 
   Lock, 
-  Layers 
+  Layers,
+  Phone
 } from 'lucide-react';
 import type { Campaign, Submission, SubmissionStatus } from '../types';
 import { getCampaigns, getSubmissions, updateSubmissionStatus, createCampaign } from '../lib/api';
@@ -73,7 +74,6 @@ export const AdminPortal: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Default passcodes for easy class rep access
     if (passcode === 'che300' || passcode === 'lautech2026' || passcode === 'admin') {
       setIsAuthenticated(true);
       localStorage.setItem('deptpay_admin_auth', 'true');
@@ -140,7 +140,6 @@ export const AdminPortal: React.FC = () => {
       ? 'All_Departmental_Collections'
       : (campaigns.find(c => c.id === selectedCampaignId)?.title || 'Departmental_List');
     
-    // Export approved or all filtered
     const dataToExport = filteredSubmissions.filter(s => s.status === 'approved');
     exportSubmissionsToExcel(dataToExport.length > 0 ? dataToExport : filteredSubmissions, campaignTitle);
   };
@@ -168,34 +167,34 @@ export const AdminPortal: React.FC = () => {
   // Login Screen if unauthenticated
   if (!isAuthenticated) {
     return (
-      <div className="max-w-md mx-auto px-4 py-16">
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center">
-          <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xs">
-            <Lock className="w-7 h-7" />
+      <div className="max-w-md mx-auto px-4 py-12 sm:py-16">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl text-center">
+          <div className="w-13 h-13 sm:w-14 sm:h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-xs">
+            <Lock className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
           <h2 className="text-xl font-bold text-slate-900">Class Rep Dashboard</h2>
           <p className="text-xs text-slate-500 mt-1">Enter your Rep Passcode to manage receipt verifications and class records.</p>
 
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
+          <form onSubmit={handleLogin} className="mt-5 sm:mt-6 space-y-3 sm:space-y-4">
             <input
               type="password"
               required
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
-              placeholder="Enter Rep Passcode (e.g. che300)"
-              className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm text-center font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              placeholder="Passcode (e.g. che300)"
+              className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm text-center font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
-            {loginError && <p className="text-xs text-rose-600 font-medium">{loginError}</p>}
+            {loginError && <p className="text-xs text-rose-600 font-semibold">{loginError}</p>}
             <button
               type="submit"
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
+              className="w-full py-3.5 bg-emerald-600 active:bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
             >
               Unlock Dashboard
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 text-[11px] text-slate-400">
-            Default passcodes: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">che300</code> or <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">lautech2026</code>
+          <div className="mt-5 pt-4 border-t border-slate-100 text-[11px] text-slate-400">
+            Passcodes: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-bold">che300</code> or <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-bold">lautech2026</code>
           </div>
         </div>
       </div>
@@ -203,107 +202,108 @@ export const AdminPortal: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-4 sm:space-y-6">
+      {/* Top Header & Action Buttons */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <span>Class Rep Control Center</span>
-            <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+            <span className="text-[10px] sm:text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
               CHE 300L
             </span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
             Review student payments, approve receipts, and generate lecturer printouts.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Buttons Row */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
           >
-            <Plus className="w-4 h-4" />
-            <span>New Payment Item</span>
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>New Item</span>
           </button>
           <button
             onClick={handleExport}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-            <span>Export to Excel</span>
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Export Excel</span>
           </button>
           <button
             onClick={handleLogout}
             title="Log Out"
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+            className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer shrink-0"
           >
             <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Metrics Row: Clean 2x2 grid on mobile */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Total Collected */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <Wallet className="w-6 h-6" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Verified</span>
-            <div className="text-xl font-black text-slate-900">₦{totalApprovedAmount.toLocaleString()}</div>
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">Verified Total</span>
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">₦{totalApprovedAmount.toLocaleString()}</div>
           </div>
         </div>
 
         {/* Pending Verifications */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 relative">
-            <Clock className="w-6 h-6" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 relative">
+            <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
             {pendingCount > 0 && (
               <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-ping" />
             )}
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pending Review</span>
-            <div className="text-xl font-black text-slate-900">{pendingCount} receipts</div>
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">Pending</span>
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">{pendingCount} receipts</div>
           </div>
         </div>
 
         {/* Total Approved Students */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Approved Students</span>
-            <div className="text-xl font-black text-slate-900">{approvedCount} records</div>
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">Approved</span>
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">{approvedCount} students</div>
           </div>
         </div>
 
         {/* Active Campaigns */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <Layers className="w-6 h-6" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <Layers className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Items</span>
-            <div className="text-xl font-black text-slate-900">{campaigns.filter(c => c.is_active).length} campaigns</div>
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">Active Items</span>
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">{campaigns.filter(c => c.is_active).length} items</div>
           </div>
         </div>
       </div>
 
       {/* Submissions Section */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {/* Filter Bar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-slate-50/50">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        {/* Filter Controls (Mobile Friendly Stack) */}
+        <div className="p-3 sm:p-4 border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 bg-slate-50/50">
           {/* Campaign Selector */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 shrink-0 uppercase tracking-wider">Item:</span>
+            <span className="text-[11px] font-bold text-slate-500 shrink-0 uppercase tracking-wider">Item:</span>
             <select
               value={selectedCampaignId}
               onChange={(e) => setSelectedCampaignId(e.target.value)}
-              className="p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 sm:flex-initial p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">All Payment Items</option>
               {campaigns.map((c) => (
@@ -315,12 +315,12 @@ export const AdminPortal: React.FC = () => {
           </div>
 
           {/* Status Tabs */}
-          <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl self-start md:self-auto">
+          <div className="flex items-center justify-between sm:justify-start gap-1 bg-slate-200/70 p-1 rounded-xl">
             {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer text-center ${
                   statusFilter === status
                     ? 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -332,20 +332,90 @@ export const AdminPortal: React.FC = () => {
           </div>
 
           {/* Search Box */}
-          <div className="relative md:w-64">
+          <div className="relative w-full md:w-64">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search matric or name..."
-              className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* 1. MOBILE CARDS VIEW (Only visible on screens < 768px) */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="text-center py-10 text-slate-400 text-xs">
+              Loading submissions...
+            </div>
+          ) : filteredSubmissions.length === 0 ? (
+            <div className="text-center py-10 text-slate-400 text-xs">
+              No submissions match this filter.
+            </div>
+          ) : (
+            filteredSubmissions.map((sub) => (
+              <div key={sub.id} className="p-3.5 hover:bg-slate-50/60 transition-colors space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="font-extrabold text-slate-900 text-sm truncate">{sub.full_name}</h2>
+                    <span className="font-mono font-bold text-xs text-emerald-800">{sub.matric_number}</span>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                    sub.status === 'approved'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : sub.status === 'rejected'
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}>
+                    {sub.status}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span className="truncate max-w-[200px] font-medium text-slate-700">
+                    {sub.campaign?.title || 'Fee'}
+                  </span>
+                  <span className="font-extrabold text-slate-900 shrink-0">
+                    ₦{(sub.campaign?.amount || 0).toLocaleString()}
+                  </span>
+                </div>
+
+                {sub.phone_number && (
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span>{sub.phone_number}</span>
+                  </div>
+                )}
+
+                {/* Mobile Thumb Action Buttons */}
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => setActiveReceipt(sub)}
+                    className="flex-1 py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Inspect Receipt</span>
+                  </button>
+
+                  {sub.status !== 'approved' && (
+                    <button
+                      onClick={() => handleApprove(sub.id)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Approve</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* 2. DESKTOP TABLE VIEW (Visible on >= 768px) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
@@ -383,17 +453,17 @@ export const AdminPortal: React.FC = () => {
                     <td className="py-3.5 px-4 font-mono font-bold text-emerald-800">
                       {sub.matric_number}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700 max-w-xs truncate">
+                    <td className="py-3.5 px-4 text-slate-700 max-w-xs truncate font-medium">
                       {sub.campaign?.title || 'Departmental Fee'}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
                       ₦{(sub.campaign?.amount || 0).toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
                       {new Date(sub.created_at).toLocaleDateString('en-GB')}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
                         sub.status === 'approved'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : sub.status === 'rejected'
@@ -406,7 +476,7 @@ export const AdminPortal: React.FC = () => {
                     <td className="py-3.5 px-4 text-right space-x-1">
                       <button
                         onClick={() => setActiveReceipt(sub)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-[11px] transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-colors cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5 text-slate-500" />
                         <span>Inspect</span>
@@ -415,7 +485,7 @@ export const AdminPortal: React.FC = () => {
                       {sub.status !== 'approved' && (
                         <button
                           onClick={() => handleApprove(sub.id)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] transition-colors shadow-2xs cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors shadow-2xs cursor-pointer"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
                           <span>Approve</span>
@@ -432,108 +502,108 @@ export const AdminPortal: React.FC = () => {
 
       {/* MODAL: Create New Campaign */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 border border-slate-100 animate-in zoom-in-95">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Create New Payment Collection</h2>
-            <p className="text-xs text-slate-500 mb-4">Set up a new study material, textbook, or departmental fee.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-4 sm:p-6 border border-slate-100 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-0.5">Create Payment Collection</h2>
+            <p className="text-xs text-slate-500 mb-3 sm:mb-4">Set up a new study material, textbook, or dues.</p>
 
             <form onSubmit={handleCreateCampaign} className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Item Title *</label>
+                <label className="block font-bold text-slate-700 mb-1">Item Title *</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. CHE 303 Reaction Engineering Manual"
-                  className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Course Code</label>
+                  <label className="block font-bold text-slate-700 mb-1">Course Code</label>
                   <input
                     type="text"
                     value={newCourseCode}
                     onChange={(e) => setNewCourseCode(e.target.value)}
                     placeholder="e.g. CHE 303"
-                    className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none uppercase"
+                    className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs uppercase font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Amount (NGN) *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Amount (NGN) *</label>
                   <input
                     type="number"
                     required
                     value={newAmount}
                     onChange={(e) => setNewAmount(e.target.value)}
                     placeholder="e.g. 3500"
-                    className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Bank Name *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Bank Name *</label>
                   <input
                     type="text"
                     required
                     value={newBankName}
                     onChange={(e) => setNewBankName(e.target.value)}
-                    placeholder="e.g. OPay / Kuda / GTBank"
-                    className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="e.g. OPay / Kuda"
+                    className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Account Number *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Account Number *</label>
                   <input
                     type="text"
                     required
                     value={newAccountNum}
                     onChange={(e) => setNewAccountNum(e.target.value)}
                     placeholder="e.g. 8123456789"
-                    className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono"
+                    className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Account Name *</label>
+                <label className="block font-bold text-slate-700 mb-1">Account Name *</label>
                 <input
                   type="text"
                   required
                   value={newAccountName}
                   onChange={(e) => setNewAccountName(e.target.value)}
                   placeholder="e.g. Adeyemi Daniel (Class Rep)"
-                  className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Description (Optional)</label>
+                <label className="block font-bold text-slate-700 mb-1">Description (Optional)</label>
                 <textarea
                   rows={2}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder="Instructions for students..."
-                  className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
-              <div className="flex gap-2 pt-3 border-t border-slate-100">
+              <div className="flex gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 cursor-pointer"
+                  className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreatingCampaign}
-                  className="w-1/2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="w-1/2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   {isCreatingCampaign ? 'Creating...' : 'Create Item'}
                 </button>

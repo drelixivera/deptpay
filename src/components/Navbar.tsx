@@ -1,6 +1,5 @@
 import React from 'react';
-import { ShieldCheck, GraduationCap, Sparkles, Database } from 'lucide-react';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { ShieldCheck, GraduationCap, Sparkles } from 'lucide-react';
 
 interface NavbarProps {
   currentView: 'student' | 'admin';
@@ -10,57 +9,60 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-      {/* Top micro-bar */}
-      <div className="bg-emerald-800 text-emerald-100 text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
-        <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-        <span>DeptPay • Ladoke Akintola University of Technology (LAUTECH) Chemical Engineering</span>
-        {!isSupabaseConfigured && (
-          <span className="hidden sm:inline-flex items-center gap-1 bg-emerald-950/60 text-emerald-300 px-2 py-0.5 rounded-full text-[11px]">
-            <Database className="w-3 h-3" /> Demo Mode Active
-          </span>
-        )}
+      {/* Top micro-bar: responsive text */}
+      <div className="bg-emerald-800 text-emerald-100 text-[11px] sm:text-xs py-1.5 px-3 sm:px-4 text-center font-medium flex items-center justify-center gap-1.5 sm:gap-2">
+        <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300 shrink-0" />
+        <span className="truncate">
+          <span className="hidden sm:inline">DeptPay • Ladoke Akintola University of Technology (LAUTECH) </span>
+          <span>Chemical Engineering • CHE 300L</span>
+        </span>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
         {/* Brand */}
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewChange('student')}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-            <GraduationCap className="w-6 h-6" />
+        <div 
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" 
+          onClick={() => onViewChange('student')}
+        >
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
+            <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-xl tracking-tight text-slate-900">Dept<span className="text-emerald-600">Pay</span></span>
-              <span className="bg-emerald-50 text-emerald-700 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-emerald-200/60">
-                CHE 300L
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900">
+                Dept<span className="text-emerald-600">Pay</span>
+              </span>
+              <span className="bg-emerald-50 text-emerald-700 text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                300L
               </span>
             </div>
-            <p className="text-xs text-slate-500 hidden sm:block">Receipt Verification & Bookkeeping Portal</p>
+            <p className="text-[11px] text-slate-500 hidden md:block">Receipt Verification & Bookkeeping</p>
           </div>
         </div>
 
-        {/* View Switcher */}
-        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
+        {/* View Switcher: Touch-friendly and compact on mobile */}
+        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
           <button
             onClick={() => onViewChange('student')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 sm:gap-1.5 cursor-pointer ${
               currentView === 'student'
-                ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                ? 'bg-white text-emerald-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <GraduationCap className="w-4 h-4 text-emerald-600" />
-            <span>Student Portal</span>
+            <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+            <span>Student<span className="hidden sm:inline"> Portal</span></span>
           </button>
           <button
             onClick={() => onViewChange('admin')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 sm:gap-1.5 cursor-pointer ${
               currentView === 'admin'
-                ? 'bg-emerald-700 text-white shadow-xs font-semibold'
+                ? 'bg-emerald-700 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Class Rep Portal</span>
+            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span>Class Rep<span className="hidden sm:inline"> Portal</span></span>
           </button>
         </div>
       </div>
