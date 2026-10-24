@@ -11,7 +11,8 @@ import {
   LogOut, 
   Lock, 
   Layers,
-  Phone
+  Phone,
+  RotateCcw
 } from 'lucide-react';
 import type { Campaign, Submission, SubmissionStatus } from '../types';
 import { getCampaigns, getSubmissions, updateSubmissionStatus, createCampaign } from '../lib/api';
@@ -36,9 +37,32 @@ export const AdminPortal: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | SubmissionStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modals
+  // Modals & Feedback
   const [activeReceipt, setActiveReceipt] = useState<Submission | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      const [camps, subs] = await Promise.all([
+        getCampaigns(),
+        getSubmissions(selectedCampaignId),
+      ]);
+      setCampaigns(camps);
+      setSubmissions(subs);
+      showToast('Records refreshed!', 'info');
+    } catch {
+      showToast('Could not refresh records.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // New Campaign Form
   const [newTitle, setNewTitle] = useState('');
@@ -90,17 +114,27 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleApprove = async (id: string) => {
-    await updateSubmissionStatus(id, 'approved');
-    setSubmissions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'approved', reviewed_at: new Date().toISOString() } : s))
-    );
+    try {
+      await updateSubmissionStatus(id, 'approved');
+      setSubmissions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, status: 'approved', reviewed_at: new Date().toISOString() } : s))
+      );
+      showToast('Receipt approved & recorded!', 'success');
+    } catch {
+      showToast('Failed to approve receipt. Check connection.', 'error');
+    }
   };
 
   const handleReject = async (id: string, reason: string) => {
-    await updateSubmissionStatus(id, 'rejected', reason);
-    setSubmissions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() } : s))
-    );
+    try {
+      await updateSubmissionStatus(id, 'rejected', reason);
+      setSubmissions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() } : s))
+      );
+      showToast('Receipt marked as rejected.', 'info');
+    } catch {
+      showToast('Failed to update receipt. Check connection.', 'error');
+    }
   };
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
@@ -122,6 +156,7 @@ export const AdminPortal: React.FC = () => {
 
       setCampaigns([created, ...campaigns]);
       setShowCreateModal(false);
+      showToast(`Created item: ${created.title}`, 'success');
       // Reset form
       setNewTitle('');
       setNewCourseCode('');
@@ -129,20 +164,27 @@ export const AdminPortal: React.FC = () => {
       setNewAccountNum('');
       setNewAccountName('');
       setNewDescription('');
-    } catch (err) {
-      console.error(err);
+    } catch {
+      showToast('Failed to create payment item.', 'error');
     } finally {
       setIsCreatingCampaign(false);
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const campaignTitle = selectedCampaignId === 'all'
       ? 'All_Departmental_Collections'
       : (campaigns.find(c => c.id === selectedCampaignId)?.title || 'Departmental_List');
     
     const dataToExport = filteredSubmissions.filter(s => s.status === 'approved');
-    exportSubmissionsToExcel(dataToExport.length > 0 ? dataToExport : filteredSubmissions, campaignTitle);
+    const records = dataToExport.length > 0 ? dataToExport : filteredSubmissions;
+    
+    const success = await exportSubmissionsToExcel(records, campaignTitle);
+    if (!success) {
+      showToast('No submissions found to export.', 'error');
+    } else {
+      showToast(`Exported ${records.length} records to Excel!`, 'success');
+    }
   };
 
   // Metrics
@@ -332,16 +374,25 @@ export const AdminPortal: React.FC = () => {
             ))}
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full md:w-64">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search matric or name..."
-              className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            />
+          {/* Search Box & Refresh Button */}
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search matric or name..."
+                className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={handleRefresh}
+              title="Refresh submissions"
+              className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-colors cursor-pointer shrink-0 shadow-2xs"
+            >
+              <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
           </div>
         </div>
 
@@ -622,6 +673,21 @@ export const AdminPortal: React.FC = () => {
           onApprove={handleApprove}
           onReject={handleReject}
         />
+      )}
+
+      {/* Floating Action Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-5 right-4 sm:right-6 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+          <div className={`px-4 py-2.5 rounded-xl shadow-lg border text-xs sm:text-sm font-bold flex items-center gap-2 ${
+            toast.type === 'success'
+              ? 'bg-slate-900 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10'
+              : toast.type === 'error'
+              ? 'bg-rose-900 text-rose-100 border-rose-700'
+              : 'bg-slate-900 text-slate-100 border-slate-700'
+          }`}>
+            <span>{toast.message}</span>
+          </div>
+        </div>
       )}
     </div>
   );

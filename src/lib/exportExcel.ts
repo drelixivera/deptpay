@@ -1,11 +1,19 @@
 import type { Submission } from '../types';
 
-export async function exportSubmissionsToExcel(submissions: Submission[], campaignTitle: string) {
+export async function exportSubmissionsToExcel(submissions: Submission[], campaignTitle: string): Promise<boolean> {
+  if (!submissions || submissions.length === 0) {
+    return false;
+  }
+
   // Dynamically load XLSX only when the user clicks the export button
   const XLSX = await import('xlsx');
 
-  // Filter to approved or current view
-  const formattedData = submissions.map((sub, index) => ({
+  // Sort by Matric Number for lecturers (e.g. 20/4001, 20/4002...)
+  const sortedSubmissions = [...submissions].sort((a, b) => 
+    a.matric_number.localeCompare(b.matric_number, undefined, { numeric: true, sensitivity: 'base' })
+  );
+
+  const formattedData = sortedSubmissions.map((sub, index) => ({
     'S/N': index + 1,
     'Matric Number': sub.matric_number,
     'Full Name': sub.full_name,
@@ -22,14 +30,14 @@ export async function exportSubmissionsToExcel(submissions: Submission[], campai
   // Set column widths for clean readability
   worksheet['!cols'] = [
     { wch: 6 },   // S/N
-    { wch: 15 },  // Matric
-    { wch: 28 },  // Full Name
-    { wch: 32 },  // Payment Item
-    { wch: 14 },  // Amount
-    { wch: 16 },  // Phone
-    { wch: 12 },  // Status
-    { wch: 15 },  // Submission Date
-    { wch: 15 },  // Approval Date
+    { wch: 16 },  // Matric
+    { wch: 30 },  // Full Name
+    { wch: 34 },  // Payment Item
+    { wch: 15 },  // Amount
+    { wch: 18 },  // Phone
+    { wch: 14 },  // Status
+    { wch: 16 },  // Submission Date
+    { wch: 16 },  // Approval Date
   ];
 
   const workbook = XLSX.utils.book_new();
@@ -37,4 +45,5 @@ export async function exportSubmissionsToExcel(submissions: Submission[], campai
 
   const safeFilename = `${campaignTitle.replace(/[^a-zA-Z0-9]/g, '_')}_Official_List.xlsx`;
   XLSX.writeFile(workbook, safeFilename);
+  return true;
 }

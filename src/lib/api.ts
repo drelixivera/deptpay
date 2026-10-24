@@ -5,6 +5,11 @@ import { INITIAL_CAMPAIGNS, INITIAL_SUBMISSIONS } from './mockData';
 const LOCAL_STORAGE_KEY_CAMPAIGNS = 'deptpay_campaigns_v1';
 const LOCAL_STORAGE_KEY_SUBMISSIONS = 'deptpay_submissions_v1';
 
+// Helper to remove extra whitespace and uppercase matric numbers consistently
+export function normalizeMatric(matric: string): string {
+  return matric.replace(/\s+/g, '').toUpperCase();
+}
+
 // Initialize localStorage fallback
 function getLocalCampaigns(): Campaign[] {
   const data = localStorage.getItem(LOCAL_STORAGE_KEY_CAMPAIGNS);
@@ -127,7 +132,7 @@ export async function getSubmissions(campaignId?: string): Promise<Submission[]>
 
 // 5. Check Student Submissions by Matric Number
 export async function getSubmissionsByMatric(matric: string): Promise<Submission[]> {
-  const normalizedMatric = matric.trim().toLowerCase();
+  const normalizedMatric = normalizeMatric(matric);
   
   if (!isSupabaseConfigured) {
     const subs = getLocalSubmissions();
@@ -135,7 +140,7 @@ export async function getSubmissionsByMatric(matric: string): Promise<Submission
     const campMap = new Map(camps.map(c => [c.id, c]));
 
     return subs
-      .filter(s => s.matric_number.trim().toLowerCase() === normalizedMatric)
+      .filter(s => normalizeMatric(s.matric_number).includes(normalizedMatric))
       .map(s => ({ ...s, campaign: campMap.get(s.campaign_id) }));
   }
 
@@ -145,7 +150,7 @@ export async function getSubmissionsByMatric(matric: string): Promise<Submission
       *,
       campaign:campaigns(*)
     `)
-    .ilike('matric_number', normalizedMatric)
+    .ilike('matric_number', `%${normalizedMatric}%`)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -160,6 +165,8 @@ export async function submitReceipt(
   phoneNumber: string,
   receiptFile: File
 ): Promise<Submission> {
+  const cleanMatric = normalizeMatric(matricNumber);
+
   // Compress image on mobile/browser to save data and bandwidth
   const options = {
     maxSizeMB: 0.5,
@@ -188,7 +195,7 @@ export async function submitReceipt(
       id: 'sub-' + Date.now(),
       campaign_id: campaignId,
       full_name: fullName.trim(),
-      matric_number: matricNumber.trim().toUpperCase(),
+      matric_number: cleanMatric,
       phone_number: phoneNumber.trim(),
       receipt_url: receiptUrl,
       status: 'pending',
@@ -201,9 +208,9 @@ export async function submitReceipt(
   }
 
   // Live Supabase Storage Upload
-  const fileExt = receiptFile.name.split('.').pop();
-  const fileName = `${Date.now()}_${matricNumber.replace(/\//g, '_')}.${fileExt}`;
-  const filePath = `receipts/${fileName}`;
+  const fileExt = receiptFile.name.split('.').pop() || 'jpg';
+  const fileName = `${Date.now()}_${cleanMatric.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExt}`;
+  const filePath = fileName;
 
   const { error: uploadError } = await supabase.storage
     .from('receipts')
@@ -225,7 +232,7 @@ export async function submitReceipt(
       {
         campaign_id: campaignId,
         full_name: fullName.trim(),
-        matric_number: matricNumber.trim().toUpperCase(),
+        matric_number: cleanMatric,
         phone_number: phoneNumber.trim(),
         receipt_url: receiptUrl,
         status: 'pending',
