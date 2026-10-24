@@ -74,12 +74,13 @@ export const AdminPortal: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode === 'che300' || passcode === 'lautech2026' || passcode === 'admin') {
+    const configuredPasscode = import.meta.env.VITE_ADMIN_PASSCODE || 'che300';
+    if (passcode.trim() === configuredPasscode || passcode.trim() === 'lautech2026') {
       setIsAuthenticated(true);
       localStorage.setItem('deptpay_admin_auth', 'true');
       setLoginError('');
     } else {
-      setLoginError('Incorrect passcode. (Hint: che300)');
+      setLoginError('Incorrect passcode. Access restricted to authorized executives.');
     }
   };
 
@@ -181,7 +182,7 @@ export const AdminPortal: React.FC = () => {
               required
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
-              placeholder="Passcode (e.g. che300)"
+              placeholder="Enter Rep Passcode"
               className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm text-center font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
             {loginError && <p className="text-xs text-rose-600 font-semibold">{loginError}</p>}
@@ -194,7 +195,7 @@ export const AdminPortal: React.FC = () => {
           </form>
 
           <div className="mt-5 pt-4 border-t border-slate-100 text-[11px] text-slate-400">
-            Passcodes: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-bold">che300</code> or <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-bold">lautech2026</code>
+            🔒 Protected Portal • Authorized personnel only
           </div>
         </div>
       </div>
