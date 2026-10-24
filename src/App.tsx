@@ -1,15 +1,34 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Navbar } from './components/Navbar';
 import { StudentPortal } from './components/StudentPortal';
+import { SplashScreen } from './components/SplashScreen';
 import { isSupabaseConfigured } from './lib/supabase';
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(m => ({ default: m.AdminPortal })));
 
 export function App() {
   const [currentView, setCurrentView] = useState<'student' | 'admin'>('student');
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashFade, setSplashFade] = useState(false);
+
+  useEffect(() => {
+    // Show branded splash screen on initial entrance
+    const timer = setTimeout(() => {
+      setSplashFade(true);
+      const closeTimer = setTimeout(() => {
+        setShowSplash(false);
+      }, 500); // Wait for fade-out transition
+      return () => clearTimeout(closeTimer);
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 selection:bg-emerald-500 selection:text-white">
+      {/* Branded Native-App Style Splash Screen */}
+      {showSplash && <SplashScreen fadeOut={splashFade} />}
+
       {/* Header */}
       <Navbar currentView={currentView} onViewChange={setCurrentView} />
 

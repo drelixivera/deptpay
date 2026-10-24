@@ -9,9 +9,58 @@
     <link rel="preconnect" href="https://ydkxzalmznhtqsrvplqe.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://ydkxzalmznhtqsrvplqe.supabase.co" />
     <title>DeptPay | LAUTECH Chemical Engineering 300L</title>
+    <style>
+      /* Instant HTML Splash Screen while JS bundle loads */
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        background: #0f172a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .loader-ring {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid rgba(16, 185, 129, 0.2);
+        border-top-color: #34d399;
+        animation: spin 0.9s linear infinite;
+      }
+      .brand-title {
+        color: white;
+        font-size: 22px;
+        font-weight: 800;
+        margin-top: 18px;
+        letter-spacing: -0.5px;
+      }
+      .brand-title span {
+        color: #34d399;
+      }
+      .brand-sub {
+        color: #94a3b8;
+        font-size: 11px;
+        margin-top: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-loader">
+        <div class="loader-ring"></div>
+        <div class="brand-title">Dept<span>Pay</span></div>
+        <div class="brand-sub">Chemical Engineering • LAUTECH</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
