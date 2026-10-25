@@ -1,5 +1,4 @@
 import React from 'react';
-import { GraduationCap } from 'lucide-react';
 
 interface SplashScreenProps {
   fadeOut?: boolean;
@@ -18,11 +17,15 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ fadeOut }) => {
       {/* Spinning Ring & Logo Container */}
       <div className="relative flex items-center justify-center mb-6">
         {/* Outer Animated Spinning Ring */}
-        <div className="w-24 h-24 rounded-full border-3 border-emerald-500/20 border-t-emerald-400 animate-spin"></div>
+        <div className="w-28 h-28 rounded-full border-3 border-emerald-500/20 border-t-emerald-400 animate-spin"></div>
         
-        {/* Center Glowing Brand Icon */}
-        <div className="absolute w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-xl shadow-emerald-500/30">
-          <GraduationCap className="w-9 h-9 animate-bounce duration-1000" />
+        {/* Center LAUTECH Official Crest */}
+        <div className="absolute w-20 h-20 rounded-full bg-white p-2.5 flex items-center justify-center shadow-xl shadow-emerald-500/25 border border-slate-700/50">
+          <img 
+            src="/lautech-logo.png" 
+            alt="LAUTECH Crest" 
+            className="w-full h-full object-contain animate-pulse duration-1000" 
+          />
         </div>
       </div>
 

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/lautech-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="theme-color" content="#065f46" />
     <meta name="description" content="LAUTECH Chemical Engineering Departmental Payment & Receipt Verification Portal" />
@@ -22,19 +22,35 @@
         z-index: 9999;
         font-family: system-ui, -apple-system, sans-serif;
       }
+      .loader-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
       .loader-ring {
-        width: 80px;
-        height: 80px;
+        width: 86px;
+        height: 86px;
         border-radius: 50%;
         border: 3px solid rgba(16, 185, 129, 0.2);
         border-top-color: #34d399;
         animation: spin 0.9s linear infinite;
       }
+      .loader-logo {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+        background: white;
+        border-radius: 50%;
+        padding: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      }
       .brand-title {
         color: white;
         font-size: 22px;
         font-weight: 800;
-        margin-top: 18px;
+        margin-top: 20px;
         letter-spacing: -0.5px;
       }
       .brand-title span {
@@ -56,7 +72,10 @@
   <body>
     <div id="root">
       <div id="initial-loader">
-        <div class="loader-ring"></div>
+        <div class="loader-container">
+          <div class="loader-ring"></div>
+          <img src="/lautech-logo.png" alt="LAUTECH Crest" class="loader-logo" />
+        </div>
         <div class="brand-title">Dept<span>Pay</span></div>
         <div class="brand-sub">Chemical Engineering • LAUTECH</div>
       </div>

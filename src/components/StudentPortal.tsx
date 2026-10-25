@@ -66,7 +66,7 @@ export const StudentPortal: React.FC = () => {
     if (!selectedCampaign) return;
     navigator.clipboard.writeText(selectedCampaign.account_number);
     setCopiedBank(true);
-    setTimeout(() => setCopiedBank(false), 2000);
+    setTimeout(() => setCopiedBank(false), 1000);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,7 +163,7 @@ export const StudentPortal: React.FC = () => {
           Chemical Engineering Departmental Payments
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 mt-1.5 sm:mt-2 max-w-xl mx-auto px-2">
-          Make your bank transfer, submit your receipt here, and get verified without sending WhatsApp DMs.
+          Make your bank transfer, submit required details here, and get verified
         </p>
 
         {/* Full-width responsive Tab Switcher */}
@@ -193,7 +193,7 @@ export const StudentPortal: React.FC = () => {
         </div>
       </div>
 
-      {/* TAB 1: SUBMIT RECEIPT */}
+      {/* TAB 1: SUBMIT DETAILS & RECEIPT */}
       {activeTab === 'submit' && (
         <>
           {submittedSuccess ? (
@@ -348,7 +348,7 @@ export const StudentPortal: React.FC = () => {
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Adeyemi Daniel Babatunde"
+                      placeholder="e.g. "
                       className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Provide Surname first or as on departmental list.</p>

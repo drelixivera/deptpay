@@ -24,8 +24,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => 
           className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" 
           onClick={() => onViewChange('student')}
         >
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
-            <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-white p-1 border border-slate-200/80 shadow-xs flex items-center justify-center shrink-0">
+            <img 
+              src="/lautech-logo.png" 
+              alt="LAUTECH Crest" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
