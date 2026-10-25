@@ -15,7 +15,7 @@ Built specifically for **LAUTECH Chemical Engineering (CHE 300L)** to eliminate 
 - **Celebration Feedback**: Confetti burst & clear confirmation summary upon submission.
 
 ### For Class Rep (Admin Control Center)
-- **Protected Access**: Fast passcode-protected dashboard (`che300` or `lautech2026`).
+Protected Access: Reps sign in with a Supabase Auth account. Public signups are disabled — only accounts created by the class admin can access the dashboard.
 - **Real-Time Collections Metrics**: Total verified amount (₦), count of verified students, and pending queue counter.
 - **High-Resolution Receipt Inspector**: View transfer receipts side-by-side with student details.
 - **One-Click Approval & Rejection**: Approve with 1 click, or reject with preset reasons (*"Amount mismatch"*, *"Blurry screenshot"*, *"Duplicate reference"*).

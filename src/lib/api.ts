@@ -5,12 +5,49 @@ import { INITIAL_CAMPAIGNS, INITIAL_SUBMISSIONS } from './mockData';
 const LOCAL_STORAGE_KEY_CAMPAIGNS = 'deptpay_campaigns_v1';
 const LOCAL_STORAGE_KEY_SUBMISSIONS = 'deptpay_submissions_v1';
 
-// Helper to remove extra whitespace and uppercase matric numbers consistently
+// -----------------------------------------------------------------------------
+// Normalization
+// -----------------------------------------------------------------------------
+
+// Collapse separators and whitespace so "20-4102", "20 / 4102", "20/4102"
+// all become "20/4102". Used everywhere we touch a matric number.
 export function normalizeMatric(matric: string): string {
-  return matric.replace(/\s+/g, '').toUpperCase();
+  return matric
+    .trim()
+    .toUpperCase()
+    .replace(/[\s\-_.]+/g, '/')
+    .replace(/\/+/g, '/')
+    .replace(/^\/|\/$/g, '');
 }
 
-// Initialize localStorage fallback
+// -----------------------------------------------------------------------------
+// Auth (rep only)
+// -----------------------------------------------------------------------------
+
+export async function signInRep(email: string, password: string) {
+  if (!isSupabaseConfigured) {
+    throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data.user;
+}
+
+export async function signOutRep() {
+  if (!isSupabaseConfigured) return;
+  await supabase.auth.signOut();
+}
+
+export async function getCurrentRep() {
+  if (!isSupabaseConfigured) return null;
+  const { data } = await supabase.auth.getUser();
+  return data.user ?? null;
+}
+
+// -----------------------------------------------------------------------------
+// Demo-mode (localStorage) helpers
+// -----------------------------------------------------------------------------
+
 function getLocalCampaigns(): Campaign[] {
   const data = localStorage.getItem(LOCAL_STORAGE_KEY_CAMPAIGNS);
   if (!data) {
@@ -37,7 +74,10 @@ function saveLocalCampaigns(camps: Campaign[]) {
   localStorage.setItem(LOCAL_STORAGE_KEY_CAMPAIGNS, JSON.stringify(camps));
 }
 
-// 1. Fetch all campaigns
+// -----------------------------------------------------------------------------
+// Campaigns
+// -----------------------------------------------------------------------------
+
 export async function getCampaigns(): Promise<Campaign[]> {
   if (!isSupabaseConfigured) {
     return getLocalCampaigns();
@@ -54,8 +94,9 @@ export async function getCampaigns(): Promise<Campaign[]> {
   return data || [];
 }
 
-// 2. Create a new campaign
-export async function createCampaign(campaign: Omit<Campaign, 'id' | 'created_at'>): Promise<Campaign> {
+export async function createCampaign(
+  campaign: Omit<Campaign, 'id' | 'created_at'>
+): Promise<Campaign> {
   if (!isSupabaseConfigured) {
     const newCamp: Campaign = {
       ...campaign,
@@ -77,10 +118,9 @@ export async function createCampaign(campaign: Omit<Campaign, 'id' | 'created_at
   return data;
 }
 
-// 3. Toggle Campaign Status
 export async function toggleCampaignStatus(id: string, is_active: boolean): Promise<void> {
   if (!isSupabaseConfigured) {
-    const list = getLocalCampaigns().map(c => c.id === id ? { ...c, is_active } : c);
+    const list = getLocalCampaigns().map(c => (c.id === id ? { ...c, is_active } : c));
     saveLocalCampaigns(list);
     return;
   }
@@ -92,13 +132,51 @@ export async function toggleCampaignStatus(id: string, is_active: boolean): Prom
   if (error) throw error;
 }
 
-// 4. Fetch Submissions (for Admin Dashboard)
+// -----------------------------------------------------------------------------
+// Submissions — reading
+// -----------------------------------------------------------------------------
+
+// Student-facing: fetch only *this* matric's submissions via the RPC.
+export async function getMySubmissions(matric: string): Promise<Submission[]> {
+  const normalized = normalizeMatric(matric);
+
+  if (!isSupabaseConfigured) {
+    const subs = getLocalSubmissions();
+    const camps = getLocalCampaigns();
+    const campMap = new Map(camps.map(c => [c.id, c]));
+
+    return subs
+      .filter(s => normalizeMatric(s.matric_number) === normalized)
+      .map(s => ({ ...s, campaign: campMap.get(s.campaign_id) }));
+  }
+
+  const { data, error } = await supabase.rpc('get_my_submissions', {
+    p_matric: normalized,
+  });
+
+  if (error) throw error;
+
+  const camps = await getCampaigns();
+  const campMap = new Map(camps.map(c => [c.id, c]));
+
+  return (data || []).map((s: Submission) => ({
+    ...s,
+    campaign: campMap.get(s.campaign_id),
+  }));
+}
+
+// Kept as a thin alias so StudentPortal's existing import keeps working.
+export async function getSubmissionsByMatric(matric: string): Promise<Submission[]> {
+  return getMySubmissions(matric);
+}
+
+// Rep-facing: fetch all submissions (or one campaign's worth).
 export async function getSubmissions(campaignId?: string): Promise<Submission[]> {
   if (!isSupabaseConfigured) {
     const subs = getLocalSubmissions();
     const camps = getLocalCampaigns();
     const campMap = new Map(camps.map(c => [c.id, c]));
-    
+
     let filtered = subs.map(s => ({
       ...s,
       campaign: campMap.get(s.campaign_id),
@@ -125,39 +203,15 @@ export async function getSubmissions(campaignId?: string): Promise<Submission[]>
   const { data, error } = await query;
   if (error) {
     console.error('Error fetching submissions from Supabase:', error);
-    return getLocalSubmissions();
+    return [];
   }
   return data || [];
 }
 
-// 5. Check Student Submissions by Matric Number
-export async function getSubmissionsByMatric(matric: string): Promise<Submission[]> {
-  const normalizedMatric = normalizeMatric(matric);
-  
-  if (!isSupabaseConfigured) {
-    const subs = getLocalSubmissions();
-    const camps = getLocalCampaigns();
-    const campMap = new Map(camps.map(c => [c.id, c]));
+// -----------------------------------------------------------------------------
+// Submissions — writing
+// -----------------------------------------------------------------------------
 
-    return subs
-      .filter(s => normalizeMatric(s.matric_number).includes(normalizedMatric))
-      .map(s => ({ ...s, campaign: campMap.get(s.campaign_id) }));
-  }
-
-  const { data, error } = await supabase
-    .from('submissions')
-    .select(`
-      *,
-      campaign:campaigns(*)
-    `)
-    .ilike('matric_number', `%${normalizedMatric}%`)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
-}
-
-// 6. Submit a Receipt
 export async function submitReceipt(
   campaignId: string,
   fullName: string,
@@ -167,7 +221,6 @@ export async function submitReceipt(
 ): Promise<Submission> {
   const cleanMatric = normalizeMatric(matricNumber);
 
-  // Compress image on mobile/browser to save data and bandwidth
   const options = {
     maxSizeMB: 0.5,
     maxWidthOrHeight: 1400,
@@ -181,11 +234,8 @@ export async function submitReceipt(
     console.warn('Image compression skipped, uploading original:', err);
   }
 
-  let receiptUrl = '';
-
   if (!isSupabaseConfigured) {
-    // In mock mode, convert image to Base64 or object URL for local storage demo
-    receiptUrl = await new Promise((resolve) => {
+    const receiptUrl = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.readAsDataURL(compressedFile);
@@ -207,14 +257,12 @@ export async function submitReceipt(
     return newSub;
   }
 
-  // Live Supabase Storage Upload
-  const fileExt = receiptFile.name.split('.').pop() || 'jpg';
+  const fileExt = receiptFile.name.split('.').pop()?.toLowerCase() || 'jpg';
   const fileName = `${Date.now()}_${cleanMatric.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExt}`;
-  const filePath = fileName;
 
   const { error: uploadError } = await supabase.storage
     .from('receipts')
-    .upload(filePath, compressedFile);
+    .upload(fileName, compressedFile);
 
   if (uploadError) {
     throw new Error(`Receipt upload failed: ${uploadError.message}`);
@@ -222,11 +270,11 @@ export async function submitReceipt(
 
   const { data: publicUrlData } = supabase.storage
     .from('receipts')
-    .getPublicUrl(filePath);
+    .getPublicUrl(fileName);
 
-  receiptUrl = publicUrlData.publicUrl;
+  const receiptUrl = publicUrlData.publicUrl;
 
-  const { data, error: insertError } = await supabase
+  const { error: insertError } = await supabase
     .from('submissions')
     .insert([
       {
@@ -237,24 +285,29 @@ export async function submitReceipt(
         receipt_url: receiptUrl,
         status: 'pending',
       },
-    ])
-    .select(`
-      *,
-      campaign:campaigns(*)
-    `)
-    .single();
+    ]);
 
   if (insertError) {
     if (insertError.code === '23505') {
-      throw new Error('A receipt has already been submitted for this matric number under this item.');
+      throw new Error(
+        'A receipt has already been submitted for this matric number under this item.'
+      );
     }
     throw insertError;
   }
 
-  return data;
+  const created = await getMySubmissions(cleanMatric);
+  const match = created.find(s => s.receipt_url === receiptUrl);
+
+  if (!match) {
+    throw new Error(
+      'Submission saved, but could not fetch it back. Use "Track Status" to confirm.'
+    );
+  }
+
+  return match;
 }
 
-// 7. Update Submission Status (Approve / Reject)
 export async function updateSubmissionStatus(
   submissionId: string,
   status: SubmissionStatus,
@@ -278,12 +331,16 @@ export async function updateSubmissionStatus(
     return;
   }
 
+  const { data: userData } = await supabase.auth.getUser();
+  const reviewedBy = userData?.user?.id ?? null;
+
   const { error } = await supabase
     .from('submissions')
     .update({
       status,
       rejection_reason: status === 'rejected' ? rejectionReason : null,
       reviewed_at: reviewedAt,
+      reviewed_by: reviewedBy,
     })
     .eq('id', submissionId);
 

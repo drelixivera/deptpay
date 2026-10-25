@@ -1,33 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Clock, 
-  CheckCircle, 
-  FileSpreadsheet, 
-  Plus, 
-  Search, 
-  Eye, 
-  Wallet, 
-  LogOut, 
-  Lock, 
+import {
+  Users,
+  Clock,
+  CheckCircle,
+  FileSpreadsheet,
+  Plus,
+  Search,
+  Eye,
+  Wallet,
+  LogOut,
+  Lock,
   Layers,
   Phone,
-  RotateCcw
+  RotateCcw,
 } from 'lucide-react';
 import type { Campaign, Submission, SubmissionStatus } from '../types';
-import { getCampaigns, getSubmissions, updateSubmissionStatus, createCampaign } from '../lib/api';
+import {
+  getCampaigns,
+  getSubmissions,
+  updateSubmissionStatus,
+  createCampaign,
+  signInRep,
+  signOutRep,
+  getCurrentRep,
+} from '../lib/api';
 import { exportSubmissionsToExcel } from '../lib/exportExcel';
 import { ReceiptModal } from './ReceiptModal';
 
 export const AdminPortal: React.FC = () => {
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('deptpay_admin_auth') === 'true';
-  });
-  const [passcode, setPasscode] = useState('');
+  // Auth state: check for an existing session on mount.
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
 
-  // Data State
+  // Data state
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -37,7 +46,7 @@ export const AdminPortal: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | SubmissionStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modals & Feedback
+  // Modals & feedback
   const [activeReceipt, setActiveReceipt] = useState<Submission | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -45,6 +54,37 @@ export const AdminPortal: React.FC = () => {
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // On mount: if a session exists, skip the login form.
+  useEffect(() => {
+    getCurrentRep()
+      .then((user) => setIsAuthenticated(!!user))
+      .finally(() => setAuthLoading(false));
+  }, []);
+
+  // Load data whenever we're authenticated (and when filter changes).
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, selectedCampaignId]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [camps, subs] = await Promise.all([
+        getCampaigns(),
+        getSubmissions(selectedCampaignId),
+      ]);
+      setCampaigns(camps);
+      setSubmissions(subs);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRefresh = async () => {
@@ -64,60 +104,34 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-  // New Campaign Form
-  const [newTitle, setNewTitle] = useState('');
-  const [newCourseCode, setNewCourseCode] = useState('');
-  const [newAmount, setNewAmount] = useState('');
-  const [newBankName, setNewBankName] = useState('OPay');
-  const [newAccountNum, setNewAccountNum] = useState('');
-  const [newAccountName, setNewAccountName] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    }
-  }, [isAuthenticated, selectedCampaignId]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [camps, subs] = await Promise.all([
-        getCampaigns(),
-        getSubmissions(selectedCampaignId),
-      ]);
-      setCampaigns(camps);
-      setSubmissions(subs);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const configuredPasscode = import.meta.env.VITE_ADMIN_PASSCODE || 'che300';
-    if (passcode.trim() === configuredPasscode || passcode.trim() === 'lautech2026') {
+    setLoginError('');
+    setLoggingIn(true);
+    try {
+      await signInRep(email.trim(), password);
       setIsAuthenticated(true);
-      localStorage.setItem('deptpay_admin_auth', 'true');
-      setLoginError('');
-    } else {
-      setLoginError('Incorrect passcode. Access restricted to authorized executives.');
+    } catch (err: any) {
+      setLoginError(err?.message || 'Invalid email or password.');
+    } finally {
+      setLoggingIn(false);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOutRep();
     setIsAuthenticated(false);
-    localStorage.removeItem('deptpay_admin_auth');
+    setSubmissions([]);
+    setCampaigns([]);
   };
 
   const handleApprove = async (id: string) => {
     try {
       await updateSubmissionStatus(id, 'approved');
       setSubmissions((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, status: 'approved', reviewed_at: new Date().toISOString() } : s))
+        prev.map((s) =>
+          s.id === id ? { ...s, status: 'approved', reviewed_at: new Date().toISOString() } : s
+        )
       );
       showToast('Receipt approved & recorded!', 'success');
     } catch {
@@ -129,13 +143,27 @@ export const AdminPortal: React.FC = () => {
     try {
       await updateSubmissionStatus(id, 'rejected', reason);
       setSubmissions((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() } : s))
+        prev.map((s) =>
+          s.id === id
+            ? { ...s, status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() }
+            : s
+        )
       );
       showToast('Receipt marked as rejected.', 'info');
     } catch {
       showToast('Failed to update receipt. Check connection.', 'error');
     }
   };
+
+  // New campaign form state
+  const [newTitle, setNewTitle] = useState('');
+  const [newCourseCode, setNewCourseCode] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+  const [newBankName, setNewBankName] = useState('OPay');
+  const [newAccountNum, setNewAccountNum] = useState('');
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,7 +185,6 @@ export const AdminPortal: React.FC = () => {
       setCampaigns([created, ...campaigns]);
       setShowCreateModal(false);
       showToast(`Created item: ${created.title}`, 'success');
-      // Reset form
       setNewTitle('');
       setNewCourseCode('');
       setNewAmount('');
@@ -172,13 +199,14 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleExport = async () => {
-    const campaignTitle = selectedCampaignId === 'all'
-      ? 'All_Departmental_Collections'
-      : (campaigns.find(c => c.id === selectedCampaignId)?.title || 'Departmental_List');
-    
-    const dataToExport = filteredSubmissions.filter(s => s.status === 'approved');
+    const campaignTitle =
+      selectedCampaignId === 'all'
+        ? 'All_Departmental_Collections'
+        : campaigns.find((c) => c.id === selectedCampaignId)?.title || 'Departmental_List';
+
+    const dataToExport = filteredSubmissions.filter((s) => s.status === 'approved');
     const records = dataToExport.length > 0 ? dataToExport : filteredSubmissions;
-    
+
     const success = await exportSubmissionsToExcel(records, campaignTitle);
     if (!success) {
       showToast('No submissions found to export.', 'error');
@@ -195,7 +223,6 @@ export const AdminPortal: React.FC = () => {
   const pendingCount = submissions.filter((s) => s.status === 'pending').length;
   const approvedCount = submissions.filter((s) => s.status === 'approved').length;
 
-  // Filtered submissions
   const filteredSubmissions = submissions.filter((s) => {
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     const query = searchQuery.toLowerCase().trim();
@@ -207,46 +234,85 @@ export const AdminPortal: React.FC = () => {
     return matchesStatus && matchesSearch;
   });
 
-  // Login Screen if unauthenticated
+  // ---------------------------------------------------------------------------
+  // Loading (checking session) screen
+  // ---------------------------------------------------------------------------
+  if (authLoading) {
+    return (
+      <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Login screen
+  // ---------------------------------------------------------------------------
   if (!isAuthenticated) {
     return (
       <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl text-center max-w-md w-full animate-in zoom-in-95">
-          <div className="w-13 h-13 sm:w-14 sm:h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-xs">
-            <Lock className="w-6 h-6 sm:w-7 sm:h-7" />
+          <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xs">
+            <Lock className="w-7 h-7" />
           </div>
           <h2 className="text-xl font-bold text-slate-900">Class Rep Dashboard</h2>
-          <p className="text-xs text-slate-500 mt-1">Enter your Rep Passcode to manage receipt verifications and class records.</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Sign in with the rep account to manage receipt verifications and class records.
+          </p>
 
-          <form onSubmit={handleLogin} className="mt-5 sm:mt-6 space-y-3 sm:space-y-4">
-            <input
-              type="password"
-              required
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
-              placeholder="Enter Rep Passcode"
-              className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm text-center font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            />
-            {loginError && <p className="text-xs text-rose-600 font-semibold">{loginError}</p>}
+          <form onSubmit={handleLogin} className="mt-6 space-y-3 text-left">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Email</label>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="rep@deptpay.local"
+                className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+
+            {loginError && (
+              <p className="text-xs text-rose-600 font-semibold">{loginError}</p>
+            )}
+
             <button
               type="submit"
-              className="w-full py-3.5 bg-emerald-600 active:bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
+              disabled={loggingIn}
+              className="w-full py-3.5 bg-emerald-600 active:bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              Unlock Dashboard
+              {loggingIn ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
           <div className="mt-5 pt-4 border-t border-slate-100 text-[11px] text-slate-400">
-            🔒 Protected Portal • Authorized personnel only
+            🔒 Protected Portal • Authorized reps only
           </div>
         </div>
       </div>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Dashboard
+  // ---------------------------------------------------------------------------
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-4 sm:space-y-6">
-      {/* Top Header & Action Buttons */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -260,7 +326,6 @@ export const AdminPortal: React.FC = () => {
           </p>
         </div>
 
-        {/* Buttons Row */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
             onClick={() => setShowCreateModal(true)}
@@ -286,20 +351,22 @@ export const AdminPortal: React.FC = () => {
         </div>
       </div>
 
-      {/* Metrics Row: Clean 2x2 grid on mobile */}
+      {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-        {/* Total Collected */}
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
             <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div className="min-w-0">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">Verified Total</span>
-            <div className="text-base sm:text-xl font-black text-slate-900 truncate">₦{totalApprovedAmount.toLocaleString()}</div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">
+              Verified Total
+            </span>
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">
+              ₦{totalApprovedAmount.toLocaleString()}
+            </div>
           </div>
         </div>
 
-        {/* Pending Verifications */}
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 relative">
             <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -308,41 +375,51 @@ export const AdminPortal: React.FC = () => {
             )}
           </div>
           <div className="min-w-0">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">Pending</span>
-            <div className="text-base sm:text-xl font-black text-slate-900 truncate">{pendingCount} receipts</div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">
+              Pending
+            </span>
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">
+              {pendingCount} receipts
+            </div>
           </div>
         </div>
 
-        {/* Total Approved Students */}
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
             <Users className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div className="min-w-0">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">Approved</span>
-            <div className="text-base sm:text-xl font-black text-slate-900 truncate">{approvedCount} students</div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">
+              Approved
+            </span>
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">
+              {approvedCount} students
+            </div>
           </div>
         </div>
 
-        {/* Active Campaigns */}
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
             <Layers className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div className="min-w-0">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">Active Items</span>
-            <div className="text-base sm:text-xl font-black text-slate-900 truncate">{campaigns.filter(c => c.is_active).length} items</div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">
+              Active Items
+            </span>
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">
+              {campaigns.filter((c) => c.is_active).length} items
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Submissions Section */}
+      {/* Submissions section */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
-        {/* Filter Controls (Mobile Friendly Stack) */}
         <div className="p-3 sm:p-4 border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 bg-slate-50/50">
-          {/* Campaign Selector */}
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-500 shrink-0 uppercase tracking-wider">Item:</span>
+            <span className="text-[11px] font-bold text-slate-500 shrink-0 uppercase tracking-wider">
+              Item:
+            </span>
             <select
               value={selectedCampaignId}
               onChange={(e) => setSelectedCampaignId(e.target.value)}
@@ -351,13 +428,13 @@ export const AdminPortal: React.FC = () => {
               <option value="all">All Payment Items</option>
               {campaigns.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.course_code ? `[${c.course_code}] ` : ''}{c.title}
+                  {c.course_code ? `[${c.course_code}] ` : ''}
+                  {c.title}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Status Tabs */}
           <div className="flex items-center justify-between sm:justify-start gap-1 bg-slate-200/70 p-1 rounded-xl">
             {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
               <button
@@ -374,7 +451,6 @@ export const AdminPortal: React.FC = () => {
             ))}
           </div>
 
-          {/* Search Box & Refresh Button */}
           <div className="flex items-center gap-2 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
@@ -396,12 +472,10 @@ export const AdminPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* 1. MOBILE CARDS VIEW (Only visible on screens < 768px) */}
+        {/* Mobile cards */}
         <div className="block md:hidden divide-y divide-slate-100">
           {loading ? (
-            <div className="text-center py-10 text-slate-400 text-xs">
-              Loading submissions...
-            </div>
+            <div className="text-center py-10 text-slate-400 text-xs">Loading submissions...</div>
           ) : filteredSubmissions.length === 0 ? (
             <div className="text-center py-10 text-slate-400 text-xs">
               No submissions match this filter.
@@ -412,15 +486,19 @@ export const AdminPortal: React.FC = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h2 className="font-extrabold text-slate-900 text-sm truncate">{sub.full_name}</h2>
-                    <span className="font-mono font-bold text-xs text-emerald-800">{sub.matric_number}</span>
+                    <span className="font-mono font-bold text-xs text-emerald-800">
+                      {sub.matric_number}
+                    </span>
                   </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 ${
-                    sub.status === 'approved'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : sub.status === 'rejected'
-                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                      : 'bg-amber-50 text-amber-700 border border-amber-200'
-                  }`}>
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                      sub.status === 'approved'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : sub.status === 'rejected'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                    }`}
+                  >
                     {sub.status}
                   </span>
                 </div>
@@ -441,7 +519,6 @@ export const AdminPortal: React.FC = () => {
                   </div>
                 )}
 
-                {/* Mobile Thumb Action Buttons */}
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={() => setActiveReceipt(sub)}
@@ -466,7 +543,7 @@ export const AdminPortal: React.FC = () => {
           )}
         </div>
 
-        {/* 2. DESKTOP TABLE VIEW (Visible on >= 768px) */}
+        {/* Desktop table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
@@ -499,7 +576,9 @@ export const AdminPortal: React.FC = () => {
                     <td className="py-3.5 px-4 font-semibold text-slate-900">
                       <div>{sub.full_name}</div>
                       {sub.phone_number && (
-                        <span className="text-[11px] text-slate-400 font-normal">{sub.phone_number}</span>
+                        <span className="text-[11px] text-slate-400 font-normal">
+                          {sub.phone_number}
+                        </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-mono font-bold text-emerald-800">
@@ -515,13 +594,15 @@ export const AdminPortal: React.FC = () => {
                       {new Date(sub.created_at).toLocaleDateString('en-GB')}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
-                        sub.status === 'approved'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : sub.status === 'rejected'
-                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                          sub.status === 'approved'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : sub.status === 'rejected'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
+                      >
                         {sub.status}
                       </span>
                     </td>
@@ -552,12 +633,16 @@ export const AdminPortal: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL: Create New Campaign */}
+      {/* Create campaign modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-4 sm:p-6 border border-slate-100 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-0.5">Create Payment Collection</h2>
-            <p className="text-xs text-slate-500 mb-3 sm:mb-4">Set up a new study material, textbook, or dues.</p>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-0.5">
+              Create Payment Collection
+            </h2>
+            <p className="text-xs text-slate-500 mb-3 sm:mb-4">
+              Set up a new study material, textbook, or dues.
+            </p>
 
             <form onSubmit={handleCreateCampaign} className="space-y-3 text-xs">
               <div>
@@ -665,7 +750,7 @@ export const AdminPortal: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: Full Receipt Viewer */}
+      {/* Receipt modal */}
       {activeReceipt && (
         <ReceiptModal
           submission={activeReceipt}
@@ -675,16 +760,18 @@ export const AdminPortal: React.FC = () => {
         />
       )}
 
-      {/* Floating Action Toast Notification */}
+      {/* Toast */}
       {toast && (
         <div className="fixed bottom-5 right-4 sm:right-6 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
-          <div className={`px-4 py-2.5 rounded-xl shadow-lg border text-xs sm:text-sm font-bold flex items-center gap-2 ${
-            toast.type === 'success'
-              ? 'bg-slate-900 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10'
-              : toast.type === 'error'
-              ? 'bg-rose-900 text-rose-100 border-rose-700'
-              : 'bg-slate-900 text-slate-100 border-slate-700'
-          }`}>
+          <div
+            className={`px-4 py-2.5 rounded-xl shadow-lg border text-xs sm:text-sm font-bold flex items-center gap-2 ${
+              toast.type === 'success'
+                ? 'bg-slate-900 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10'
+                : toast.type === 'error'
+                ? 'bg-rose-900 text-rose-100 border-rose-700'
+                : 'bg-slate-900 text-slate-100 border-slate-700'
+            }`}
+          >
             <span>{toast.message}</span>
           </div>
         </div>
