@@ -198,22 +198,32 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
-    const campaignTitle =
-      selectedCampaignId === 'all'
-        ? 'All_Departmental_Collections'
-        : campaigns.find((c) => c.id === selectedCampaignId)?.title || 'Departmental_List';
+const handleExport = async () => {
+  const campaignTitle =
+    selectedCampaignId === 'all'
+      ? 'All_Departmental_Collections'
+      : campaigns.find((c) => c.id === selectedCampaignId)?.title || 'Departmental_List';
 
-    const dataToExport = filteredSubmissions.filter((s) => s.status === 'approved');
-    const records = dataToExport.length > 0 ? dataToExport : filteredSubmissions;
+  // Only ever export approved rows. No fallback — if nothing's approved,
+  // we tell the rep clearly instead of silently exporting pending rows.
+  const approved = filteredSubmissions.filter((s) => s.status === 'approved');
 
-    const success = await exportSubmissionsToExcel(records, campaignTitle);
-    if (!success) {
-      showToast('No submissions found to export.', 'error');
-    } else {
-      showToast(`Exported ${records.length} records to Excel!`, 'success');
-    }
-  };
+  if (approved.length === 0) {
+    showToast(
+      'No approved submissions for this filter. Approve some receipts first.',
+      'error',
+    );
+    return;
+  }
+
+  const result = await exportSubmissionsToExcel(approved, campaignTitle);
+
+  if (result.ok) {
+    showToast(`Exported ${result.count} approved records to Excel!`, 'success');
+  } else {
+    showToast(result.reason, 'error');
+  }
+};
 
   // Metrics
   const totalApprovedAmount = submissions
