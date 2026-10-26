@@ -51,7 +51,7 @@ export async function exportSubmissionsToExcel(
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData, {
     origin: 'A7', // leave rows 1-6 for the header block
-  });
+  } as any);
 
   // ---- Header block (rows 1-5) -------------------------------------------
   XLSX.utils.sheet_add_aoa(
