@@ -198,32 +198,30 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-const handleExport = async () => {
-  const campaignTitle =
-    selectedCampaignId === 'all'
-      ? 'All_Departmental_Collections'
-      : campaigns.find((c) => c.id === selectedCampaignId)?.title || 'Departmental_List';
+  const handleExport = async () => {
+    const campaignTitle =
+      selectedCampaignId === 'all'
+        ? 'All_Departmental_Collections'
+        : campaigns.find((c) => c.id === selectedCampaignId)?.title || 'Departmental_List';
 
-  // Only ever export approved rows. No fallback — if nothing's approved,
-  // we tell the rep clearly instead of silently exporting pending rows.
-  const approved = filteredSubmissions.filter((s) => s.status === 'approved');
+    const approved = filteredSubmissions.filter((s) => s.status === 'approved');
 
-  if (approved.length === 0) {
-    showToast(
-      'No approved submissions for this filter. Approve some receipts first.',
-      'error',
-    );
-    return;
-  }
+    if (approved.length === 0) {
+      showToast(
+        'No approved submissions for this filter. Approve some receipts first.',
+        'error',
+      );
+      return;
+    }
 
-  const result = await exportSubmissionsToExcel(approved, campaignTitle);
+    const result = await exportSubmissionsToExcel(approved, campaignTitle);
 
-  if (result.ok) {
-    showToast(`Exported ${result.count} approved records to Excel!`, 'success');
-  } else {
-    showToast(result.reason, 'error');
-  }
-};
+    if (result.ok) {
+      showToast(`Exported ${result.count} approved records to Excel!`, 'success');
+    } else {
+      showToast(result.reason, 'error');
+    }
+  };
 
   // Metrics
   const totalApprovedAmount = submissions
@@ -538,7 +536,7 @@ const handleExport = async () => {
                     <span>Inspect Receipt</span>
                   </button>
 
-                  {sub.status !== 'approved' && (
+                  {sub.status !== 'approved' && sub.rejection_reason !== 'Replaced by a new upload from the student.' && (
                     <button
                       onClick={() => handleApprove(sub.id)}
                       className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
@@ -625,7 +623,7 @@ const handleExport = async () => {
                         <span>Inspect</span>
                       </button>
 
-                      {sub.status !== 'approved' && (
+                      {sub.status !== 'approved' && sub.rejection_reason !== 'Replaced by a new upload from the student.' && (
                         <button
                           onClick={() => handleApprove(sub.id)}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors shadow-2xs cursor-pointer"

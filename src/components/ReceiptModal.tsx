@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, XCircle, ExternalLink, Calendar, Phone, CreditCard, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle, XCircle, ExternalLink, Calendar, Phone, CreditCard, AlertTriangle, Info } from 'lucide-react';
 import type { Submission } from '../types';
 
 interface ReceiptModalProps {
@@ -21,6 +21,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const [actionLoading, setActionLoading] = useState(false);
 
   if (!submission) return null;
+
+  // Check if this was automatically replaced by the system
+  const isSystemReplaced = submission.rejection_reason === 'Replaced by a new upload from the student.';
 
   const handleApprove = async () => {
     setActionLoading(true);
@@ -133,9 +136,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
 
               {submission.status === 'rejected' && submission.rejection_reason && (
-                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs">
+                <div className={`p-2.5 border rounded-xl text-xs ${
+                  isSystemReplaced 
+                    ? 'bg-slate-50 border-slate-200 text-slate-600' 
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                }`}>
                   <div className="font-bold flex items-center gap-1 mb-0.5">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Rejection Reason:
+                    {isSystemReplaced ? <Info className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />} 
+                    {isSystemReplaced ? 'System Note:' : 'Rejection Reason:'}
                   </div>
                   {submission.rejection_reason}
                 </div>
@@ -145,7 +153,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
           {/* Action Buttons: Thumb-Friendly */}
           <div className="pt-3 border-t border-slate-100">
-            {rejecting ? (
+            {/* If the system replaced this, hide all action buttons */}
+            {isSystemReplaced ? (
+              <div className="p-3 bg-slate-100 rounded-xl text-center">
+                <p className="text-xs font-bold text-slate-500">This receipt was replaced by a newer upload.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Review the newer pending submission instead.</p>
+              </div>
+            ) : rejecting ? (
               <div className="space-y-2.5">
                 <label className="block text-xs font-bold text-slate-700">Reason for Rejection:</label>
                 <select
