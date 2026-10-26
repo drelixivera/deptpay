@@ -552,9 +552,9 @@ export const AdminPortal: React.FC = () => {
         </div>
 
         {/* Desktop table */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="py-3 px-4">Student</th>
                 <th className="py-3 px-4">Matric No</th>
