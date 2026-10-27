@@ -12,7 +12,12 @@ const LOCAL_STORAGE_KEY_SUBMISSIONS = 'deptpay_submissions_v1';
 // Collapse separators and whitespace so "20-4102", "20 / 4102", "20/4102"
 // all become "20/4102". Used everywhere we touch a matric number.
 export function normalizeMatric(matric: string): string {
-  return matric.replace(/\D/g, '');
+  return matric
+    .trim()
+    .toUpperCase()
+    .replace(/[\s\-_.]+/g, '/')
+    .replace(/\/+/g, '/')
+    .replace(/^\/|\/$/g, '');
 }
 
 // -----------------------------------------------------------------------------
@@ -122,6 +127,23 @@ export async function toggleCampaignStatus(id: string, is_active: boolean): Prom
   const { error } = await supabase
     .from('campaigns')
     .update({ is_active })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function deleteCampaign(id: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const list = getLocalCampaigns().filter(c => c.id !== id);
+    saveLocalCampaigns(list);
+    const subs = getLocalSubmissions().filter(s => s.campaign_id !== id);
+    saveLocalSubmissions(subs);
+    return;
+  }
+  
+  const { error } = await supabase
+    .from('campaigns')
+    .delete()
     .eq('id', id);
 
   if (error) throw error;
@@ -269,29 +291,7 @@ export async function submitReceipt(
 
   const receiptUrl = publicUrlData.publicUrl;
 
-    // Before inserting the new one, find if there is an existing pending submission
-  // for this same student and same campaign.
-  const { data: existing } = await supabase
-    .from('submissions')
-    .select('id')
-    .eq('campaign_id', campaignId)
-    .eq('matric_number', cleanMatric)
-    .eq('status', 'pending')
-    .maybeSingle();
-
-  // If they already have a pending one, let's reject it automatically.
-  if (existing) {
-    await supabase
-      .from('submissions')
-      .update({
-        status: 'rejected',
-        rejection_reason: 'Replaced by a new upload from the student.',
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq('id', existing.id);
-  }
-
-  // Now insert the new one
+  // We removed the auto-reject logic here. All submissions will just insert.
   const { error: insertError } = await supabase
     .from('submissions')
     .insert([
@@ -306,6 +306,11 @@ export async function submitReceipt(
     ]);
 
   if (insertError) {
+    if (insertError.code === '23505') {
+      throw new Error(
+        'A receipt has already been submitted for this matric number under this item.'
+      );
+    }
     throw insertError;
   }
 
@@ -356,24 +361,6 @@ export async function updateSubmissionStatus(
       reviewed_by: reviewedBy,
     })
     .eq('id', submissionId);
-
-  if (error) throw error;
-}
-
-export async function deleteCampaign(id: string): Promise<void> {
-  if (!isSupabaseConfigured) {
-    const list = getLocalCampaigns().filter(c => c.id !== id);
-    saveLocalCampaigns(list);
-    // Also delete submissions attached to it
-    const subs = getLocalSubmissions().filter(s => s.campaign_id !== id);
-    saveLocalSubmissions(subs);
-    return;
-  }
-  
-  const { error } = await supabase
-    .from('campaigns')
-    .delete()
-    .eq('id', id);
 
   if (error) throw error;
 }
