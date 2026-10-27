@@ -46,6 +46,10 @@ export const AdminPortal: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | SubmissionStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   // Modals & feedback
   const [activeReceipt, setActiveReceipt] = useState<Submission | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -241,6 +245,18 @@ export const AdminPortal: React.FC = () => {
       (s.phone_number && s.phone_number.includes(query));
     return matchesStatus && matchesSearch;
   });
+
+  // Pagination Math
+  const totalPages = Math.ceil(filteredSubmissions.length / ITEMS_PER_PAGE);
+  const currentSubmissions = filteredSubmissions.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to page 1 whenever the user searches or changes filters
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, selectedCampaignId]);
 
   // ---------------------------------------------------------------------------
   // Loading (checking session) screen
@@ -489,7 +505,7 @@ export const AdminPortal: React.FC = () => {
               No submissions match this filter.
             </div>
           ) : (
-            filteredSubmissions.map((sub) => (
+            currentSubmissions.map((sub) => (
               <div key={sub.id} className="p-3.5 hover:bg-slate-50/60 transition-colors space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -552,7 +568,7 @@ export const AdminPortal: React.FC = () => {
         </div>
 
         {/* Desktop table */}
-        <div className="hidden md:block overflow-x-auto max-h-[600px] overflow-y-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200 sticky top-0 z-10 shadow-sm">
               <tr>
@@ -579,7 +595,7 @@ export const AdminPortal: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredSubmissions.map((sub) => (
+                currentSubmissions.map((sub) => (
                   <tr key={sub.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3.5 px-4 font-semibold text-slate-900">
                       <div>{sub.full_name}</div>
@@ -639,6 +655,39 @@ export const AdminPortal: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {!loading && filteredSubmissions.length > 0 && (
+          <div className="p-3 sm:p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <span className="text-[11px] sm:text-xs text-slate-500 font-medium">
+              Showing <span className="font-bold text-slate-800">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredSubmissions.length)}
+              </span>{' '}
+              of <span className="font-bold text-slate-800">{filteredSubmissions.length}</span>
+            </span>
+            
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                Previous
+              </button>
+              <span className="text-xs font-bold text-slate-700 px-2">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create campaign modal */}
