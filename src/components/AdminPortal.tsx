@@ -9,7 +9,7 @@ import {
   Eye,
   Wallet,
   LogOut,
-  Lock,
+  UserCog,
   Layers,
   Phone,
   RotateCcw,
@@ -312,7 +312,7 @@ export const AdminPortal: React.FC = () => {
       <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl text-center max-w-md w-full animate-in zoom-in-95">
           <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xs">
-            <Lock className="w-7 h-7" />
+            <UserCog className="w-7 h-7" />
           </div>
           <h2 className="text-xl font-bold text-slate-900">Class Rep Dashboard</h2>
           <p className="text-xs text-slate-500 mt-1">
