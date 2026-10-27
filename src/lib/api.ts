@@ -359,3 +359,21 @@ export async function updateSubmissionStatus(
 
   if (error) throw error;
 }
+
+export async function deleteCampaign(id: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const list = getLocalCampaigns().filter(c => c.id !== id);
+    saveLocalCampaigns(list);
+    // Also delete submissions attached to it
+    const subs = getLocalSubmissions().filter(s => s.campaign_id !== id);
+    saveLocalSubmissions(subs);
+    return;
+  }
+  
+  const { error } = await supabase
+    .from('campaigns')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}

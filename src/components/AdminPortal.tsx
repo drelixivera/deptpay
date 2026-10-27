@@ -13,6 +13,10 @@ import {
   Layers,
   Phone,
   RotateCcw,
+  Archive,
+  ArchiveRestore,
+  Trash2,
+  X,
 } from 'lucide-react';
 import type { Campaign, Submission, SubmissionStatus } from '../types';
 import {
@@ -23,12 +27,14 @@ import {
   signInRep,
   signOutRep,
   getCurrentRep,
+  toggleCampaignStatus,
+  deleteCampaign,
 } from '../lib/api';
 import { exportSubmissionsToExcel } from '../lib/exportExcel';
 import { ReceiptModal } from './ReceiptModal';
 
 export const AdminPortal: React.FC = () => {
-  // Auth state: check for an existing session on mount.
+  // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [email, setEmail] = useState('');
@@ -53,6 +59,7 @@ export const AdminPortal: React.FC = () => {
   // Modals & feedback
   const [activeReceipt, setActiveReceipt] = useState<Submission | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -60,20 +67,25 @@ export const AdminPortal: React.FC = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // On mount: if a session exists, skip the login form.
+  // On mount: check session
   useEffect(() => {
     getCurrentRep()
       .then((user) => setIsAuthenticated(!!user))
       .finally(() => setAuthLoading(false));
   }, []);
 
-  // Load data whenever we're authenticated (and when filter changes).
+  // Load data when authenticated or campaign changes
   useEffect(() => {
     if (isAuthenticated) {
       loadData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, selectedCampaignId]);
+
+  // Reset pagination on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, selectedCampaignId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -202,6 +214,36 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
+  // Toggle Archive / Active
+  const handleToggleCampaign = async (id: string, currentStatus: boolean) => {
+    try {
+      await toggleCampaignStatus(id, !currentStatus);
+      setCampaigns(campaigns.map(c => c.id === id ? { ...c, is_active: !currentStatus } : c));
+      showToast(`Campaign ${currentStatus ? 'archived' : 'activated'}!`, 'success');
+    } catch {
+      showToast('Failed to update campaign.', 'error');
+    }
+  };
+
+  // Delete Campaign (with heavy warning)
+  const handleDeleteCampaign = async (id: string, title: string) => {
+    const confirm = window.confirm(
+      `🚨 ARE YOU ABSOLUTELY SURE? 🚨\n\nYou are about to permanently delete "${title}".\n\nThis will also delete EVERY STUDENT RECEIPT attached to this campaign. This action CANNOT be undone. Have you exported your Excel file?\n\nClick OK to permanently delete, or Cancel to go back.`
+    );
+    
+    if (!confirm) return;
+
+    try {
+      await deleteCampaign(id);
+      setCampaigns(campaigns.filter(c => c.id !== id));
+      if (selectedCampaignId === id) setSelectedCampaignId('all');
+      setSubmissions(submissions.filter(s => s.campaign_id !== id));
+      showToast('Campaign permanently deleted.', 'info');
+    } catch {
+      showToast('Failed to delete campaign.', 'error');
+    }
+  };
+
   const handleExport = async () => {
     const campaignTitle =
       selectedCampaignId === 'all'
@@ -211,10 +253,7 @@ export const AdminPortal: React.FC = () => {
     const approved = filteredSubmissions.filter((s) => s.status === 'approved');
 
     if (approved.length === 0) {
-      showToast(
-        'No approved submissions for this filter. Approve some receipts first.',
-        'error',
-      );
+      showToast('No approved submissions for this filter. Approve some receipts first.', 'error');
       return;
     }
 
@@ -235,6 +274,7 @@ export const AdminPortal: React.FC = () => {
   const pendingCount = submissions.filter((s) => s.status === 'pending').length;
   const approvedCount = submissions.filter((s) => s.status === 'approved').length;
 
+  // Filtering & Pagination
   const filteredSubmissions = submissions.filter((s) => {
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     const query = searchQuery.toLowerCase().trim();
@@ -246,20 +286,14 @@ export const AdminPortal: React.FC = () => {
     return matchesStatus && matchesSearch;
   });
 
-  // Pagination Math
   const totalPages = Math.ceil(filteredSubmissions.length / ITEMS_PER_PAGE);
   const currentSubmissions = filteredSubmissions.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Reset to page 1 whenever the user searches or changes filters
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, statusFilter, selectedCampaignId]);
-
   // ---------------------------------------------------------------------------
-  // Loading (checking session) screen
+  // Loading / Login Screens
   // ---------------------------------------------------------------------------
   if (authLoading) {
     return (
@@ -269,9 +303,6 @@ export const AdminPortal: React.FC = () => {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Login screen
-  // ---------------------------------------------------------------------------
   if (!isAuthenticated) {
     return (
       <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center px-4 py-8 sm:py-12">
@@ -310,9 +341,7 @@ export const AdminPortal: React.FC = () => {
               />
             </div>
 
-            {loginError && (
-              <p className="text-xs text-rose-600 font-semibold">{loginError}</p>
-            )}
+            {loginError && <p className="text-xs text-rose-600 font-semibold">{loginError}</p>}
 
             <button
               type="submit"
@@ -351,6 +380,13 @@ export const AdminPortal: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <button
+            onClick={() => setShowManageModal(true)}
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer shrink-0"
+          >
+            <Archive className="w-4 h-4 shrink-0" />
+            <span>Manage Items</span>
+          </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
@@ -689,6 +725,61 @@ export const AdminPortal: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Manage Campaigns Modal */}
+      {showManageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-4 sm:p-6 border border-slate-100 animate-in zoom-in-95 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">Manage Payment Items</h2>
+                <p className="text-xs text-slate-500">Archive old items to hide them from students, or permanently delete them.</p>
+              </div>
+              <button onClick={() => setShowManageModal(false)} className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-2 flex-1">
+              {campaigns.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-sm">No campaigns created yet.</div>
+              ) : (
+                campaigns.map((c) => (
+                  <div key={c.id} className="p-3 border border-slate-200 rounded-xl flex items-center justify-between gap-3 bg-slate-50/50">
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-900 text-sm truncate">{c.title}</div>
+                      <div className="text-[11px] text-slate-500">
+                        ₦{c.amount.toLocaleString()} • {c.course_code || 'No Code'}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        c.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {c.is_active ? 'Active' : 'Archived'}
+                      </span>
+                      <button
+                        onClick={() => handleToggleCampaign(c.id, c.is_active)}
+                        title={c.is_active ? 'Archive (Hide from students)' : 'Activate (Show to students)'}
+                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                      >
+                        {c.is_active ? <Archive className="w-4 h-4" /> : <ArchiveRestore className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCampaign(c.id, c.title)}
+                        title="Delete permanently"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create campaign modal */}
       {showCreateModal && (
