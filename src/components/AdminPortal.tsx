@@ -30,7 +30,7 @@ import {
   toggleCampaignStatus,
   deleteCampaign,
 } from '../lib/api';
-import { exportSubmissionsToExcel } from '../lib/exportExcel';
+import { exportSubmissionsToPDF } from '../lib/exportPdf';
 import { ReceiptModal } from './ReceiptModal';
 
 export const AdminPortal: React.FC = () => {
@@ -244,7 +244,7 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
+    const handleExport = async () => {
     const campaignTitle =
       selectedCampaignId === 'all'
         ? 'All_Departmental_Collections'
@@ -253,14 +253,18 @@ export const AdminPortal: React.FC = () => {
     const approved = filteredSubmissions.filter((s) => s.status === 'approved');
 
     if (approved.length === 0) {
-      showToast('No approved submissions for this filter. Approve some receipts first.', 'error');
+      showToast(
+        'No approved submissions for this filter. Approve some receipts first.',
+        'error',
+      );
       return;
     }
 
-    const result = await exportSubmissionsToExcel(approved, campaignTitle);
+    // Change this line:
+    const result = await exportSubmissionsToPDF(approved, campaignTitle);
 
     if (result.ok) {
-      showToast(`Exported ${result.count} approved records to Excel!`, 'success');
+      showToast(`Exported ${result.count} approved records to PDF!`, 'success');
     } else {
       showToast(result.reason, 'error');
     }
@@ -399,7 +403,7 @@ export const AdminPortal: React.FC = () => {
             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Export Excel</span>
+            <span>Export PDF</span>
           </button>
           <button
             onClick={handleLogout}

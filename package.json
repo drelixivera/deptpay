@@ -13,10 +13,11 @@
     "@supabase/supabase-js": "^2.118.0",
     "browser-image-compression": "^2.0.2",
     "canvas-confetti": "^1.9.4",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.9",
     "lucide-react": "^1.61.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "xlsx": "^0.18.5"
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
