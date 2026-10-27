@@ -41,6 +41,14 @@ export const StudentPortal: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
 
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   useEffect(() => {
     loadCampaigns();
   }, []);
@@ -66,6 +74,7 @@ export const StudentPortal: React.FC = () => {
     if (!selectedCampaign) return;
     navigator.clipboard.writeText(selectedCampaign.account_number);
     setCopiedBank(true);
+    showToast('Account number copied to clipboard!', 'success');
     setTimeout(() => setCopiedBank(false), 1000);
   };
 
@@ -95,7 +104,7 @@ export const StudentPortal: React.FC = () => {
       return;
     }
     if (!matricNumber.trim()) {
-      setErrorMsg('Please enter your matriculation number (e.g. 20/4102).');
+      setErrorMsg('Please enter your matriculation number (e.g. 2024XXXXXX).');
       return;
     }
     if (!receiptFile) {
@@ -149,7 +158,11 @@ export const StudentPortal: React.FC = () => {
       setSearchedSubmissions(results);
     } catch (err: unknown) {
       console.error(err);
-      setSearchError('Could not retrieve status. Please try again.');
+      if (!navigator.onLine) {
+        setSearchError('You are currently offline. Please check your internet connection.');
+      } else {
+        setSearchError('Could not retrieve status. Please try again in a moment.');
+      }
     } finally {
       setIsSearching(false);
     }
@@ -348,7 +361,7 @@ export const StudentPortal: React.FC = () => {
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. "
+                      placeholder="e.g. Adeyemi Daniel"
                       className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Provide Surname first or as on departmental list.</p>
@@ -364,7 +377,7 @@ export const StudentPortal: React.FC = () => {
                         required
                         value={matricNumber}
                         onChange={(e) => setMatricNumber(e.target.value)}
-                        placeholder="e.g. 20/4102"
+                        placeholder="e.g. 2024XXXXXX"
                         className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-mono uppercase font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
@@ -465,7 +478,7 @@ export const StudentPortal: React.FC = () => {
                 required
                 value={searchMatric}
                 onChange={(e) => setSearchMatric(e.target.value)}
-                placeholder="e.g. 20/4102"
+                placeholder="e.g. 2024XXXXXX"
                 className="flex-1 p-2.5 sm:p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-mono uppercase font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
               <button
@@ -491,17 +504,22 @@ export const StudentPortal: React.FC = () => {
               </h3>
 
               {searchedSubmissions.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 text-center text-slate-500 text-xs sm:text-sm">
-                  <Clock className="w-7 h-7 text-slate-400 mx-auto mb-2" />
-                  No receipts found for this matric number.
-                  <div className="mt-3">
-                    <button
-                      onClick={() => setActiveTab('submit')}
-                      className="text-xs text-emerald-600 font-bold hover:underline cursor-pointer"
-                    >
-                      Submit a receipt now &rarr;
-                    </button>
+                <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-slate-400" />
                   </div>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">No receipts found</h3>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto mb-4">
+                    We couldn't find any submissions for <span className="font-mono font-bold text-slate-700">{searchMatric}</span>.
+                    <br /><br />
+                    Double-check your matric number for typos, or submit a new receipt if you haven't paid yet.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('submit')}
+                    className="px-5 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                  >
+                    Go to Upload Page
+                  </button>
                 </div>
               ) : (
                 searchedSubmissions.map((sub) => (
@@ -567,6 +585,19 @@ export const StudentPortal: React.FC = () => {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-5 right-4 sm:right-6 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+          <div className={`px-4 py-2.5 rounded-xl shadow-lg border text-xs sm:text-sm font-bold flex items-center gap-2 ${
+            toast.type === 'success'
+              ? 'bg-slate-900 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10'
+              : 'bg-rose-900 text-rose-100 border-rose-700'
+          }`}>
+            <span>{toast.message}</span>
+          </div>
         </div>
       )}
     </div>
