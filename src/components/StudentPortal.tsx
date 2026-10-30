@@ -36,6 +36,7 @@ export const StudentPortal: React.FC = () => {
   const [copiedBank, setCopiedBank] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [submittedSuccess, setSubmittedSuccess] = useState<Submission | null>(null);
+  const [networkError, setNetworkError] = useState(false);
 
   // Status Tracker State
   const [searchMatric, setSearchMatric] = useState('');
@@ -55,8 +56,16 @@ export const StudentPortal: React.FC = () => {
     loadCampaigns();
   }, []);
 
-    const loadCampaigns = async () => {
+        const loadCampaigns = async () => {
+    // 1. Instant check: If the browser knows it's offline, fail immediately.
+    if (!navigator.onLine) {
+      setNetworkError(true);
+      setLoading(false);
+      return;
+    }
+
     try {
+      setNetworkError(false);
       const data = await getCampaigns();
       const active = data.filter(c => c.is_active);
       setCampaigns(active);
@@ -65,8 +74,7 @@ export const StudentPortal: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
-      // Add this to show the student a friendly error:
-      setErrorMsg('Could not connect to the database. Please check your internet connection and refresh the page.');
+      setNetworkError(true);
     } finally {
       setLoading(false);
     }
@@ -184,6 +192,32 @@ export const StudentPortal: React.FC = () => {
       setIsSearching(false);
     }
   };
+
+  // If there's a network error, take over the whole screen
+  if (networkError) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center animate-in fade-in duration-200">
+        <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mb-6">
+          <ShieldAlert className="w-10 h-10 text-rose-600" />
+        </div>
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">
+          Connection Lost
+        </h2>
+        <p className="text-sm text-slate-500 max-w-sm mb-8">
+          We couldn't connect to the database to load the payment items. Please check your internet connection and try again.
+        </p>
+        <button
+          onClick={() => {
+            setLoading(true);
+            loadCampaigns();
+          }}
+          className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8">

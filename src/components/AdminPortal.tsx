@@ -120,15 +120,26 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+      const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+
+    // 1. Instant check: Fail fast if offline
+    if (!navigator.onLine) {
+      setLoginError('Network error. You are currently offline. Please check your internet connection.');
+      return;
+    }
+
     setLoggingIn(true);
     try {
       await signInRep(email.trim(), password);
       setIsAuthenticated(true);
     } catch (err: any) {
-      setLoginError(err?.message || 'Invalid email or password.');
+      if (err.message === 'Failed to fetch' || err.message?.includes('fetch')) {
+        setLoginError('Network error. Please check your internet connection and try again.');
+      } else {
+        setLoginError(err?.message || 'Invalid email or password.');
+      }
     } finally {
       setLoggingIn(false);
     }
