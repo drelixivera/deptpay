@@ -371,41 +371,59 @@ export const AdminPortal: React.FC = () => {
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <span>Class Rep Control Center</span>
-          </h1>
-          <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
-            Review student payments, approve receipts, and generate lecturer printouts.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <button
-            onClick={() => setShowManageModal(true)}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer shrink-0"
-          >
-            <Archive className="w-4 h-4 shrink-0" />
-            <span>Manage Items</span>
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span>New Item</span>
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Export PDF</span>
-          </button>
+                <div className="flex items-start justify-between w-full sm:w-auto">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Class Rep Control Center</span>
+            </h1>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
+              Review student payments, approve receipts, and generate lecturer printouts.
+            </p>
+          </div>
+          
+          {/* Log out moved here */}
           <button
             onClick={handleLogout}
             title="Log Out"
-            className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer shrink-0"
+            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer shrink-0 sm:hidden"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          {/* Primary Action: New Item (Full width on mobile) */}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>Create New Item</span>
+          </button>
+
+          {/* Secondary Actions: Manage & Export (Side by side on mobile) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setShowManageModal(true)}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer shrink-0"
+            >
+              <Archive className="w-4 h-4 shrink-0" />
+              <span>Manage</span>
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Export PDF</span>
+            </button>
+          </div>
+
+          {/* Desktop Log out (hidden on mobile) */}
+          <button
+            onClick={handleLogout}
+            title="Log Out"
+            className="hidden sm:inline-flex p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer shrink-0 ml-1"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -439,8 +457,8 @@ export const AdminPortal: React.FC = () => {
             <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">
               Pending
             </span>
-            <div className="text-base sm:text-xl font-black text-slate-900 truncate">
-              {pendingCount} receipts
+                        <div className="text-base sm:text-xl font-black text-slate-900 truncate">
+              {pendingCount} {pendingCount === 1 ? 'receipt' : 'receipts'}
             </div>
           </div>
         </div>
