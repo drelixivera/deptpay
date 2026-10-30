@@ -55,7 +55,7 @@ export const StudentPortal: React.FC = () => {
     loadCampaigns();
   }, []);
 
-  const loadCampaigns = async () => {
+    const loadCampaigns = async () => {
     try {
       const data = await getCampaigns();
       const active = data.filter(c => c.is_active);
@@ -65,6 +65,8 @@ export const StudentPortal: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
+      // Add this to show the student a friendly error:
+      setErrorMsg('Could not connect to the database. Please check your internet connection and refresh the page.');
     } finally {
       setLoading(false);
     }

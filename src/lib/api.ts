@@ -82,6 +82,7 @@ export async function getCampaigns(): Promise<Campaign[]> {
   if (!isSupabaseConfigured) {
     return getLocalCampaigns();
   }
+  
   const { data, error } = await supabase
     .from('campaigns')
     .select('*')
@@ -89,7 +90,9 @@ export async function getCampaigns(): Promise<Campaign[]> {
 
   if (error) {
     console.error('Error fetching campaigns from Supabase:', error);
-    return getLocalCampaigns();
+    // REMOVED the fallback to getLocalCampaigns() here. 
+    // If the network is down, throw an error so the UI can handle it.
+    throw new Error('Could not load campaigns. Please check your internet connection.');
   }
   return data || [];
 }
@@ -217,10 +220,11 @@ export async function getSubmissions(campaignId?: string): Promise<Submission[]>
     query = query.eq('campaign_id', campaignId);
   }
 
-  const { data, error } = await query;
+    const { data, error } = await query;
   if (error) {
     console.error('Error fetching submissions from Supabase:', error);
-    return [];
+    // REMOVED the fallback to getLocalSubmissions().
+    throw new Error('Could not load submissions. Please check your internet connection.');
   }
   return data || [];
 }
