@@ -412,7 +412,7 @@ export const StudentPortal: React.FC = () => {
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Adeyemi Daniel"
+                      placeholder="e.g. Ojo Daniel"
                       className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Provide Surname first or as on departmental list.</p>

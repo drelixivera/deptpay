@@ -339,7 +339,7 @@ export const AdminPortal: React.FC = () => {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="xxxxxxx@deptpay.local"
+                placeholder=""
                 className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
             </div>
