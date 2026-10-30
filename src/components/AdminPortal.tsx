@@ -374,9 +374,6 @@ export const AdminPortal: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <span>Class Rep Control Center</span>
-            <span className="text-[10px] sm:text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-              CHE 300L
-            </span>
           </h1>
           <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
             Review student payments, approve receipts, and generate lecturer printouts.
