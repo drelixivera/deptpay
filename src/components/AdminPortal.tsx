@@ -41,6 +41,9 @@ export const AdminPortal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
+  
+  // Campaign Lock State
+  const [lockedCampaignId, setLockedCampaignId] = useState<string>('');
 
   // Data state
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -74,25 +77,30 @@ export const AdminPortal: React.FC = () => {
       .finally(() => setAuthLoading(false));
   }, []);
 
-  // Load data when authenticated or campaign changes
+  // Load campaigns on mount
   useEffect(() => {
-    if (isAuthenticated) {
+    getCampaigns().then(setCampaigns).catch(console.error);
+  }, []);
+
+  // Load data when lockedCampaignId changes
+  useEffect(() => {
+    if (isAuthenticated && lockedCampaignId) {
       loadData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, selectedCampaignId]);
+  }, [isAuthenticated, lockedCampaignId]);
 
   // Reset pagination on filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, selectedCampaignId]);
+  }, [searchQuery, statusFilter]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [camps, subs] = await Promise.all([
         getCampaigns(),
-        getSubmissions(selectedCampaignId),
+        getSubmissions(lockedCampaignId),
       ]);
       setCampaigns(camps);
       setSubmissions(subs);
@@ -108,7 +116,7 @@ export const AdminPortal: React.FC = () => {
     try {
       const [camps, subs] = await Promise.all([
         getCampaigns(),
-        getSubmissions(selectedCampaignId),
+        getSubmissions(lockedCampaignId),
       ]);
       setCampaigns(camps);
       setSubmissions(subs);
@@ -120,11 +128,10 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-      const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
 
-    // 1. Instant check: Fail fast if offline
     if (!navigator.onLine) {
       setLoginError('Network error. You are currently offline. Please check your internet connection.');
       return;
@@ -148,6 +155,7 @@ export const AdminPortal: React.FC = () => {
   const handleLogout = async () => {
     await signOutRep();
     setIsAuthenticated(false);
+    setLockedCampaignId(''); // Reset the lock
     setSubmissions([]);
     setCampaigns([]);
   };
@@ -239,7 +247,7 @@ export const AdminPortal: React.FC = () => {
   // Delete Campaign (with heavy warning)
   const handleDeleteCampaign = async (id: string, title: string) => {
     const confirm = window.confirm(
-      `🚨 ARE YOU ABSOLUTELY SURE? 🚨\n\nYou are about to permanently delete "${title}".\n\nThis will also delete EVERY STUDENT RECEIPT attached to this campaign. This action CANNOT be undone. Have you exported your Excel file?\n\nClick OK to permanently delete, or Cancel to go back.`
+      `🚨 ARE YOU ABSOLUTELY SURE? 🚨\n\nYou are about to permanently delete "${title}".\n\nThis will also delete EVERY STUDENT RECEIPT attached to this campaign. This action CANNOT be undone. Have you exported your PDF file?\n\nClick OK to permanently delete, or Cancel to go back.`
     );
     
     if (!confirm) return;
@@ -255,23 +263,19 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-    const handleExport = async () => {
+  const handleExport = async () => {
     const campaignTitle =
-      selectedCampaignId === 'all'
+      lockedCampaignId === 'all'
         ? 'All_Departmental_Collections'
-        : campaigns.find((c) => c.id === selectedCampaignId)?.title || 'Departmental_List';
+        : campaigns.find((c) => c.id === lockedCampaignId)?.title || 'Departmental_List';
 
     const approved = filteredSubmissions.filter((s) => s.status === 'approved');
 
     if (approved.length === 0) {
-      showToast(
-        'No approved submissions for this filter. Approve some receipts first.',
-        'error',
-      );
+      showToast('No approved submissions for this filter. Approve some receipts first.', 'error');
       return;
     }
 
-    // Change this line:
     const result = await exportSubmissionsToPDF(approved, campaignTitle);
 
     if (result.ok) {
@@ -288,6 +292,7 @@ export const AdminPortal: React.FC = () => {
 
   const pendingCount = submissions.filter((s) => s.status === 'pending').length;
   const approvedCount = submissions.filter((s) => s.status === 'approved').length;
+  const activeCampaignsCount = campaigns.filter((c) => c.is_active).length;
 
   // Filtering & Pagination
   const filteredSubmissions = submissions.filter((s) => {
@@ -339,7 +344,7 @@ export const AdminPortal: React.FC = () => {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder=""
+                placeholder="xxxxxxx@deptpay.local"
                 className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
             </div>
@@ -376,13 +381,55 @@ export const AdminPortal: React.FC = () => {
   }
 
   // ---------------------------------------------------------------------------
+  // Campaign Lock Screen
+  // ---------------------------------------------------------------------------
+  if (isAuthenticated && !lockedCampaignId) {
+    return (
+      <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center px-4 py-8">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl text-center max-w-md w-full animate-in zoom-in-95">
+          <div className="w-14 h-14 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xs">
+            <Layers className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Select Your Payment Item</h2>
+          <p className="text-xs text-slate-500 mt-1 mb-6">
+            To prevent mistakes, you can only manage one payment item per session. Choose the course you are in charge of.
+          </p>
+
+          <select
+            onChange={(e) => {
+              if (e.target.value) setLockedCampaignId(e.target.value);
+            }}
+            className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+            defaultValue=""
+          >
+            <option value="" disabled>Select a payment item...</option>
+            {campaigns.filter(c => c.is_active).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.course_code ? `[${c.course_code}] ` : ''}{c.title}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={handleLogout}
+            className="mt-6 text-xs text-slate-400 hover:text-slate-600 font-bold underline cursor-pointer"
+          >
+            Cancel & Log Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Dashboard
   // ---------------------------------------------------------------------------
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <div className="flex items-start justify-between w-full sm:w-auto">
+        
+        <div className="flex items-start justify-between w-full sm:w-auto">
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
               <span>Class Rep Control Center</span>
@@ -392,7 +439,7 @@ export const AdminPortal: React.FC = () => {
             </p>
           </div>
           
-          {/* Log out moved here */}
+          {/* Log out moved here for mobile */}
           <button
             onClick={handleLogout}
             title="Log Out"
@@ -402,7 +449,7 @@ export const AdminPortal: React.FC = () => {
           </button>
         </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {/* Primary Action: New Item (Full width on mobile) */}
           <button
             onClick={() => setShowCreateModal(true)}
@@ -430,7 +477,7 @@ export const AdminPortal: React.FC = () => {
             </button>
           </div>
 
-          {/* Desktop Log out (hidden on mobile) */}
+          {/* Desktop Log out */}
           <button
             onClick={handleLogout}
             title="Log Out"
@@ -468,7 +515,7 @@ export const AdminPortal: React.FC = () => {
             <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">
               Pending
             </span>
-                        <div className="text-base sm:text-xl font-black text-slate-900 truncate">
+            <div className="text-base sm:text-xl font-black text-slate-900 truncate">
               {pendingCount} {pendingCount === 1 ? 'receipt' : 'receipts'}
             </div>
           </div>
@@ -483,7 +530,7 @@ export const AdminPortal: React.FC = () => {
               Approved
             </span>
             <div className="text-base sm:text-xl font-black text-slate-900 truncate">
-              {approvedCount} students
+              {approvedCount} {approvedCount === 1 ? 'student' : 'students'}
             </div>
           </div>
         </div>
@@ -497,7 +544,7 @@ export const AdminPortal: React.FC = () => {
               Active Items
             </span>
             <div className="text-base sm:text-xl font-black text-slate-900 truncate">
-              {campaigns.filter((c) => c.is_active).length} items
+              {activeCampaignsCount} {activeCampaignsCount === 1 ? 'item' : 'items'}
             </div>
           </div>
         </div>
@@ -506,23 +553,15 @@ export const AdminPortal: React.FC = () => {
       {/* Submissions section */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
         <div className="p-3 sm:p-4 border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 bg-slate-50/50">
+          
+          {/* Campaign Lock Indicator */}
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold text-slate-500 shrink-0 uppercase tracking-wider">
               Item:
             </span>
-            <select
-              value={selectedCampaignId}
-              onChange={(e) => setSelectedCampaignId(e.target.value)}
-              className="flex-1 sm:flex-initial p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="all">All Payment Items</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.course_code ? `[${c.course_code}] ` : ''}
-                  {c.title}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1 sm:flex-initial px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold truncate">
+              {campaigns.find(c => c.id === lockedCampaignId)?.title || 'Loading...'}
+            </div>
           </div>
 
           <div className="flex items-center justify-between sm:justify-start gap-1 bg-slate-200/70 p-1 rounded-xl">
