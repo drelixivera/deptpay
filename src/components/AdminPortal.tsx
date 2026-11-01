@@ -410,13 +410,44 @@ export const AdminPortal: React.FC = () => {
             ))}
           </select>
 
-          <button
-            onClick={handleLogout}
-            className="mt-6 text-xs text-slate-400 hover:text-slate-600 font-bold underline cursor-pointer"
-          >
-            Cancel & Log Out
-          </button>
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={() => {
+                showToast(
+                  "Your payment item hasn't been created yet. Please contact the Tech Admin or Rep.",
+                  "error"
+                );
+              }}
+              className="w-full py-2.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl font-bold transition-colors cursor-pointer"
+            >
+              My payment item isn't listed here yet
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="w-full py-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold underline cursor-pointer"
+            >
+              Cancel & Log Out
+            </button>
+          </div>
         </div>
+
+        {/* Toast Notification for this screen */}
+        {toast && (
+          <div className="fixed bottom-5 right-4 sm:right-6 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+            <div
+              className={`px-4 py-2.5 rounded-xl shadow-lg border text-xs sm:text-sm font-bold flex items-center gap-2 ${
+                toast.type === 'success'
+                  ? 'bg-slate-900 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10'
+                  : toast.type === 'error'
+                  ? 'bg-rose-900 text-rose-100 border-rose-700'
+                  : 'bg-slate-900 text-slate-100 border-slate-700'
+              }`}
+            >
+              <span>{toast.message}</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
