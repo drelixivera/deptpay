@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => 
                 Dept<span className="text-emerald-600">Pay</span>
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 hidden md:block">Receipt Verification & Bookkeeping</p>
+            <p className="text-[11px] text-slate-500 hidden md:block">Receipt Verification & Recordkeeping</p>
           </div>
         </div>
 

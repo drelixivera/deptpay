@@ -51,12 +51,13 @@ export const StudentPortal: React.FC = () => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
-
+  
+  // shows connection lost warning that take over the whole screen when the browser is offline
   useEffect(() => {
     loadCampaigns();
   }, []);
-
-        const loadCampaigns = async () => {
+    
+    const loadCampaigns = async () => {
     // 1. Instant check: If the browser knows it's offline, fail immediately.
     if (!navigator.onLine) {
       setNetworkError(true);
@@ -79,7 +80,7 @@ export const StudentPortal: React.FC = () => {
       setLoading(false);
     }
   };
-
+  
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
 
   const handleCopyAccount = () => {
@@ -213,12 +214,12 @@ export const StudentPortal: React.FC = () => {
           }}
           className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
         >
-          Try Again
+          Try again
         </button>
       </div>
     );
   }
-
+  // main UI of student portal
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8">
       {/* Header & Tabs */}
@@ -315,7 +316,11 @@ export const StudentPortal: React.FC = () => {
                     1. Select Payment Item
                   </label>
                   {loading ? (
-                    <div className="animate-pulse h-11 bg-slate-100 rounded-xl"></div>
+                    <div className="animate-pulse h-11 bg-slate-100 rounded-xl">
+                      <span style={{marginLeft: '15px'}}>
+                        <i>Loading payment item...</i>
+                      </span>
+                    </div>
                   ) : (
                     <select
                       value={selectedCampaignId}
@@ -394,13 +399,6 @@ export const StudentPortal: React.FC = () => {
                     <h2 className="text-sm sm:text-base font-extrabold text-slate-900">2. Student & Receipt Details</h2>
                     <span className="text-[11px] text-slate-400 font-medium">Step 2 of 2</span>
                   </div>
-
-                  {errorMsg && (
-                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
-                      <ShieldAlert className="w-4 h-4 shrink-0" />
-                      <span>{errorMsg}</span>
-                    </div>
-                  )}
 
                   {/* Full Name: text-base on mobile avoids iOS Safari auto-zoom */}
                   <div>
@@ -489,6 +487,13 @@ export const StudentPortal: React.FC = () => {
                       </label>
                     )}
                   </div>
+
+                    {errorMsg && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 shrink-0" />
+                      <span>{errorMsg}</span>
+                    </div>
+                  )}
 
                   <button
                     type="submit"
