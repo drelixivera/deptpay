@@ -22,10 +22,7 @@ export const StudentPortal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'submit' | 'status'>('submit');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
-  const [pendingSubmissionData, setPendingSubmissionData] = useState<any>(null);
-
+  const [loading, setLoading] = useState(navigator.onLine);
   // Form State
   const [fullName, setFullName] = useState('');
   const [matricNumber, setMatricNumber] = useState('');
@@ -36,7 +33,7 @@ export const StudentPortal: React.FC = () => {
   const [copiedBank, setCopiedBank] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [submittedSuccess, setSubmittedSuccess] = useState<Submission | null>(null);
-  const [networkError, setNetworkError] = useState(false);
+  const [networkError, setNetworkError] = useState(!navigator.onLine);
 
   // Status Tracker State
   const [searchMatric, setSearchMatric] = useState('');
@@ -52,27 +49,14 @@ export const StudentPortal: React.FC = () => {
     setTimeout(() => setToast(null), 3000);
   };
   
-  // shows connection lost warning that take over the whole screen when the browser is offline
-  useEffect(() => {
-    loadCampaigns();
-  }, []);
-    
-    const loadCampaigns = async () => {
-    // 1. Instant check: If the browser knows it's offline, fail immediately.
-    if (!navigator.onLine) {
-      setNetworkError(true);
-      setLoading(false);
-      return;
-    }
-
+  const loadCampaigns = async () => {
+    setLoading(true);
     try {
-      setNetworkError(false);
       const data = await getCampaigns();
+      setNetworkError(false);
       const active = data.filter(c => c.is_active);
       setCampaigns(active);
-      if (active.length > 0 && !selectedCampaignId) {
-        setSelectedCampaignId(active[0].id);
-      }
+      setSelectedCampaignId(prev => prev || (active.length > 0 ? active[0].id : ''));
     } catch (err) {
       console.error(err);
       setNetworkError(true);
@@ -80,6 +64,29 @@ export const StudentPortal: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+    getCampaigns()
+      .then((data) => {
+        if (!mounted) return;
+        const active = data.filter((c) => c.is_active);
+        setCampaigns(active);
+        setSelectedCampaignId((prev) => prev || (active.length > 0 ? active[0].id : ''));
+        setNetworkError(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (mounted) setNetworkError(true);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
   
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
 
@@ -104,7 +111,7 @@ export const StudentPortal: React.FC = () => {
     }
   };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -113,7 +120,7 @@ export const StudentPortal: React.FC = () => {
     if (!matricNumber.trim()) return setErrorMsg('Please enter your matriculation number.');
     if (!receiptFile) return setErrorMsg('Please upload a receipt.');
 
-    // 1. Check for existing submissions before doing anything
+    // 1. Check for existing submissions before uploading
     setIsSubmitting(true);
     try {
       const existing = await getSubmissionsByMatric(matricNumber);
@@ -121,24 +128,26 @@ export const StudentPortal: React.FC = () => {
         (s) => s.campaign_id === selectedCampaignId
       );
 
-      if (campaignExisting.length > 0) {
-        // There is a match! Save the data and show the warning.
-        setPendingSubmissionData({
-          campaignId: selectedCampaignId,
-          fullName,
-          matricNumber,
-          phoneNumber,
-          receiptFile
-        });
-        setShowDuplicateWarning(true);
+      // Check if already approved
+      const approved = campaignExisting.find((s) => s.status === 'approved');
+      if (approved) {
+        setErrorMsg('You already have an approved and verified payment for this item! Check the "Track Status" tab to view your confirmation.');
         setIsSubmitting(false);
-        return; // Stop here. Wait for the student to decide.
+        return;
       }
 
-      // 2. No match, just submit normally
+      // Check if already pending review
+      const pending = campaignExisting.find((s) => s.status === 'pending');
+      if (pending) {
+        setErrorMsg('You already have a receipt pending verification for this item. Please wait for your class rep to review it, or check "Track Status".');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 2. Either no previous submission or previous was rejected (re-upload)
       await executeSubmission(selectedCampaignId, fullName, matricNumber, phoneNumber, receiptFile);
-    } catch (err) {
-      setErrorMsg('Could not check existing submissions. Please try again.');
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Could not check existing submissions. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -163,11 +172,8 @@ export const StudentPortal: React.FC = () => {
       setPhoneNumber('');
       setReceiptFile(null);
       setPreviewUrl(null);
-      setShowDuplicateWarning(false);
-      setPendingSubmissionData(null);
     } catch (err: any) {
       setErrorMsg(err.message || 'Submission failed.');
-      setShowDuplicateWarning(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -641,52 +647,6 @@ export const StudentPortal: React.FC = () => {
               )}
             </div>
           )}
-        </div>
-      )}
-
-            {/* Duplicate Warning Modal */}
-      {showDuplicateWarning && pendingSubmissionData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-100 animate-in zoom-in-95 text-center">
-            <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShieldAlert className="w-7 h-7" />
-            </div>
-            
-            <h3 className="text-lg font-bold text-slate-900">Heads up!</h3>
-            <p className="text-sm text-slate-600 mt-2 mb-4">
-              A submission already exists for the matric number <strong className="font-mono text-slate-800">{pendingSubmissionData.matricNumber}</strong> under this item.
-            </p>
-            <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 text-left mb-5">
-              <p className="font-bold text-slate-800 mb-1">Is this you?</p>
-              <p>If you are re-uploading your receipt, you can continue safely.</p>
-              <p className="mt-1">If you are a different student, please click <strong>Cancel</strong> and double-check your matric number to avoid a mix-up.</p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                onClick={() => {
-                  setShowDuplicateWarning(false);
-                  setPendingSubmissionData(null);
-                }}
-                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel & Fix Matric
-              </button>
-              <button
-                onClick={() => executeSubmission(
-                  pendingSubmissionData.campaignId, 
-                  pendingSubmissionData.fullName, 
-                  pendingSubmissionData.matricNumber, 
-                  pendingSubmissionData.phoneNumber, 
-                  pendingSubmissionData.receiptFile
-                )}
-                disabled={isSubmitting}
-                className="flex-1 py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
-              >
-                {isSubmitting ? 'Submitting...' : 'Yes, Continue'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

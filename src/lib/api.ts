@@ -262,6 +262,20 @@ export async function submitReceipt(
       reader.readAsDataURL(compressedFile);
     });
 
+    const current = getLocalSubmissions();
+    const existingActive = current.find(
+      s => s.campaign_id === campaignId &&
+           normalizeMatric(s.matric_number) === cleanMatric &&
+           s.status !== 'rejected'
+    );
+    if (existingActive) {
+      if (existingActive.status === 'approved') {
+        throw new Error('A payment for this matric number has already been approved for this item.');
+      } else {
+        throw new Error('A receipt for this matric number is already pending verification under this item.');
+      }
+    }
+
     const newSub: Submission = {
       id: 'sub-' + Date.now(),
       campaign_id: campaignId,
@@ -273,7 +287,6 @@ export async function submitReceipt(
       created_at: new Date().toISOString(),
     };
 
-    const current = getLocalSubmissions();
     saveLocalSubmissions([newSub, ...current]);
     return newSub;
   }
@@ -295,7 +308,6 @@ export async function submitReceipt(
 
   const receiptUrl = publicUrlData.publicUrl;
 
-  // We removed the auto-reject logic here. All submissions will just insert.
   const { error: insertError } = await supabase
     .from('submissions')
     .insert([
@@ -310,9 +322,12 @@ export async function submitReceipt(
     ]);
 
   if (insertError) {
+    // Clean up uploaded file from storage if insert fails to avoid storage orphans
+    await supabase.storage.from('receipts').remove([fileName]).catch(() => {});
+
     if (insertError.code === '23505') {
       throw new Error(
-        'A receipt has already been submitted for this matric number under this item.'
+        'A submission for this matric number is already pending or approved under this item. Check your status in "Track Status".'
       );
     }
     throw insertError;

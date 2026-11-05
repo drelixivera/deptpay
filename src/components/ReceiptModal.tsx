@@ -118,7 +118,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <div className="flex items-center gap-2.5 text-slate-600">
                   <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
                   <a 
-                    href={`https://wa.me/234${submission.phone_number.replace(/^0/, '')}`} 
+                    href={(() => {
+                      const cleanDigits = submission.phone_number.replace(/\D/g, '');
+                      let fullNum = cleanDigits;
+                      if (fullNum.startsWith('234')) {
+                        // Already has Nigeria country code
+                      } else if (fullNum.startsWith('0')) {
+                        fullNum = '234' + fullNum.slice(1);
+                      } else {
+                        fullNum = '234' + fullNum;
+                      }
+                      return `https://wa.me/${fullNum}`;
+                    })()} 
                     target="_blank" 
                     rel="noreferrer" 
                     className="text-emerald-700 hover:underline font-bold text-xs"

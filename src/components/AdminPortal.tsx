@@ -47,7 +47,7 @@ export const AdminPortal: React.FC = () => {
 
   // Data state
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
+
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -169,8 +169,12 @@ export const AdminPortal: React.FC = () => {
         )
       );
       showToast('Receipt approved & recorded!', 'success');
-    } catch {
-      showToast('Failed to approve receipt. Check connection.', 'error');
+    } catch (err: any) {
+      if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+        showToast('Cannot approve: An active or approved submission already exists for this student.', 'error');
+      } else {
+        showToast(err?.message || 'Failed to approve receipt. Check connection.', 'error');
+      }
     }
   };
 
@@ -218,6 +222,7 @@ export const AdminPortal: React.FC = () => {
       });
 
       setCampaigns([created, ...campaigns]);
+      setLockedCampaignId(created.id);
       setShowCreateModal(false);
       showToast(`Created item: ${created.title}`, 'success');
       setNewTitle('');
@@ -254,9 +259,11 @@ export const AdminPortal: React.FC = () => {
 
     try {
       await deleteCampaign(id);
-      setCampaigns(campaigns.filter(c => c.id !== id));
-      if (selectedCampaignId === id) setSelectedCampaignId('all');
-      setSubmissions(submissions.filter(s => s.campaign_id !== id));
+      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+      if (lockedCampaignId === id) {
+        setLockedCampaignId('');
+      }
+      setSubmissions((prev) => prev.filter((s) => s.campaign_id !== id));
       showToast('Campaign permanently deleted.', 'info');
     } catch {
       showToast('Failed to delete campaign.', 'error');
@@ -311,6 +318,125 @@ export const AdminPortal: React.FC = () => {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  const renderCreateCampaignModal = () => {
+    if (!showCreateModal) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-4 sm:p-6 border border-slate-100 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-0.5">
+            Create Payment Collection
+          </h2>
+          <p className="text-xs text-slate-500 mb-3 sm:mb-4">
+            Set up a new study material, textbook, or dues.
+          </p>
+
+          <form onSubmit={handleCreateCampaign} className="space-y-3 text-xs">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Item Title *</label>
+              <input
+                type="text"
+                required
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="e.g. CHE 303 Reaction Engineering Manual"
+                className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Course Code</label>
+                <input
+                  type="text"
+                  value={newCourseCode}
+                  onChange={(e) => setNewCourseCode(e.target.value)}
+                  placeholder="e.g. CHE 303"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs uppercase font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Amount (NGN) *</label>
+                <input
+                  type="number"
+                  required
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  placeholder="e.g. 3500"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Bank Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newBankName}
+                  onChange={(e) => setNewBankName(e.target.value)}
+                  placeholder="e.g. OPay / Kuda"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Account Number *</label>
+                <input
+                  type="text"
+                  required
+                  value={newAccountNum}
+                  onChange={(e) => setNewAccountNum(e.target.value)}
+                  placeholder="e.g. 8123456789"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Account Name *</label>
+              <input
+                type="text"
+                required
+                value={newAccountName}
+                onChange={(e) => setNewAccountName(e.target.value)}
+                placeholder="e.g. Adeyemi Daniel (Class Rep)"
+                className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Description (Optional)</label>
+              <textarea
+                rows={2}
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                placeholder="Instructions for students..."
+                className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isCreatingCampaign}
+                className="w-1/2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                {isCreatingCampaign ? 'Creating...' : 'Create Item'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
 
   // ---------------------------------------------------------------------------
   // Loading / Login Screens
@@ -384,6 +510,8 @@ export const AdminPortal: React.FC = () => {
   // Campaign Lock Screen
   // ---------------------------------------------------------------------------
   if (isAuthenticated && !lockedCampaignId) {
+    const activeCampaigns = campaigns.filter(c => c.is_active);
+
     return (
       <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center px-4 py-8">
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl text-center max-w-md w-full animate-in zoom-in-95">
@@ -392,35 +520,38 @@ export const AdminPortal: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold text-slate-900">Select Your Payment Item</h2>
           <p className="text-xs text-slate-500 mt-1 mb-6">
-            To prevent mistakes, you can only manage one payment item per session. Choose the course you are in charge of.
+            To prevent mistakes, you can only manage one payment item per session. Choose the course or fee you want to verify.
           </p>
 
-          <select
-            onChange={(e) => {
-              if (e.target.value) setLockedCampaignId(e.target.value);
-            }}
-            className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
-            defaultValue=""
-          >
-            <option value="" disabled>Select a payment item...</option>
-            {campaigns.filter(c => c.is_active).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.course_code ? `[${c.course_code}] ` : ''}{c.title}
-              </option>
-            ))}
-          </select>
+          {activeCampaigns.length > 0 ? (
+            <select
+              onChange={(e) => {
+                if (e.target.value) setLockedCampaignId(e.target.value);
+              }}
+              className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+              defaultValue=""
+            >
+              <option value="" disabled>Select a payment item...</option>
+              {activeCampaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.course_code ? `[${c.course_code}] ` : ''}{c.title}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 mb-2">
+              <p className="font-bold">No active payment items yet.</p>
+              <p className="text-slate-600 mt-1">Create your first collection item below to start receiving student receipts.</p>
+            </div>
+          )}
 
           <div className="mt-4 space-y-2">
             <button
-              onClick={() => {
-                showToast(
-                  "Your payment item hasn't been created yet. Please contact the Tech Admin or Rep.",
-                  "error"
-                );
-              }}
-              className="w-full py-2.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl font-bold transition-colors cursor-pointer"
+              onClick={() => setShowCreateModal(true)}
+              className="w-full py-2.5 px-4 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
-              My payment item isn't listed here yet
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Create New Payment Item</span>
             </button>
 
             <button
@@ -431,6 +562,8 @@ export const AdminPortal: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {renderCreateCampaignModal()}
 
         {/* Toast Notification for this screen */}
         {toast && (
@@ -585,14 +718,22 @@ export const AdminPortal: React.FC = () => {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
         <div className="p-3 sm:p-4 border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 bg-slate-50/50">
           
-          {/* Campaign Lock Indicator */}
+          {/* Campaign Lock Indicator & Switch Button */}
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold text-slate-500 shrink-0 uppercase tracking-wider">
               Item:
             </span>
-            <div className="flex-1 sm:flex-initial px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold truncate">
+            <div className="flex-1 sm:flex-initial px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold truncate max-w-xs sm:max-w-sm">
               {campaigns.find(c => c.id === lockedCampaignId)?.title || 'Loading...'}
             </div>
+            <button
+              onClick={() => setLockedCampaignId('')}
+              title="Switch to another payment item"
+              className="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden sm:inline">Switch Item</span>
+            </button>
           </div>
 
           <div className="flex items-center justify-between sm:justify-start gap-1 bg-slate-200/70 p-1 rounded-xl">
@@ -882,121 +1023,7 @@ export const AdminPortal: React.FC = () => {
       )}
 
       {/* Create campaign modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-4 sm:p-6 border border-slate-100 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-0.5">
-              Create Payment Collection
-            </h2>
-            <p className="text-xs text-slate-500 mb-3 sm:mb-4">
-              Set up a new study material, textbook, or dues.
-            </p>
-
-            <form onSubmit={handleCreateCampaign} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Item Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. CHE 303 Reaction Engineering Manual"
-                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Course Code</label>
-                  <input
-                    type="text"
-                    value={newCourseCode}
-                    onChange={(e) => setNewCourseCode(e.target.value)}
-                    placeholder="e.g. CHE 303"
-                    className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs uppercase font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Amount (NGN) *</label>
-                  <input
-                    type="number"
-                    required
-                    value={newAmount}
-                    onChange={(e) => setNewAmount(e.target.value)}
-                    placeholder="e.g. 3500"
-                    className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Bank Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newBankName}
-                    onChange={(e) => setNewBankName(e.target.value)}
-                    placeholder="e.g. OPay / Kuda"
-                    className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Account Number *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newAccountNum}
-                    onChange={(e) => setNewAccountNum(e.target.value)}
-                    placeholder="e.g. 8123456789"
-                    className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Account Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={newAccountName}
-                  onChange={(e) => setNewAccountName(e.target.value)}
-                  placeholder="e.g. Adeyemi Daniel (Class Rep)"
-                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Description (Optional)</label>
-                <textarea
-                  rows={2}
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Instructions for students..."
-                  className="w-full p-2.5 border border-slate-300 rounded-xl text-base sm:text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingCampaign}
-                  className="w-1/2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs disabled:opacity-50 cursor-pointer"
-                >
-                  {isCreatingCampaign ? 'Creating...' : 'Create Item'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {renderCreateCampaignModal()}
 
       {/* Receipt modal */}
       {activeReceipt && (
