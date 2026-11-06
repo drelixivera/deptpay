@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react"
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Navbar } from './components/Navbar';
 import { StudentPortal } from './components/StudentPortal';
@@ -76,6 +77,7 @@ export function App() {
           </div>
         </div>
       </footer>
+      <Analytics/>
     </div>
   );
 }
