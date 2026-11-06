@@ -438,7 +438,7 @@ export const StudentPortal: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500">Status:</span>
                   <span className="font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full text-[11px]">
-                    ðŸŸ¡ Pending Verification
+                    🟡 Pending Verification
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -488,7 +488,7 @@ export const StudentPortal: React.FC = () => {
                     >
                       {campaigns.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.course_code ? `[${c.course_code}] ` : ''}{c.title} â€” â‚¦{c.amount.toLocaleString()}
+                          {c.course_code ? `[${c.course_code}] ` : ''}{c.title} ₦ {c.amount.toLocaleString()}
                         </option>
                       ))}
                     </select>
@@ -510,7 +510,7 @@ export const StudentPortal: React.FC = () => {
                         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">Transfer Details</span>
                       </div>
                       <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-black border border-emerald-500/30">
-                        â‚¦{selectedCampaign.amount.toLocaleString()}
+                        ₦ {selectedCampaign.amount.toLocaleString()}
                       </span>
                     </div>
 
@@ -647,7 +647,7 @@ export const StudentPortal: React.FC = () => {
                             {receiptFile?.name || 'Receipt Screenshot'}
                           </p>
                           <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
-                            {receiptFile?.size ? `${(receiptFile.size / 1024).toFixed(0)} KB â€¢ ` : ''}
+                            {receiptFile?.size ? `${(receiptFile.size / 1024).toFixed(0)} KB 🟡 ` : ''}
                             Ready for verification
                           </p>
                           <p className="text-[10px] sm:text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-1">
