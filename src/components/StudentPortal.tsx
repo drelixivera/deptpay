@@ -16,7 +16,8 @@ import {
   FileCheck2,
   Image,
   ClipboardPaste,
-  X
+  X,
+  UserCheck
 } from 'lucide-react';
 import type { Campaign, Submission } from '../types';
 import { getCampaigns, submitReceipt, getSubmissionsByMatric } from '../lib/api';
@@ -26,10 +27,28 @@ export const StudentPortal: React.FC = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
   const [loading, setLoading] = useState(navigator.onLine);
-  // Form State
-  const [fullName, setFullName] = useState('');
-  const [matricNumber, setMatricNumber] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  // Remember Me: lazy-initialize form fields from localStorage (no effect needed)
+  const [fullName, setFullName] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('deptpay_saved_student');
+      if (raw) return (JSON.parse(raw) as { fullName: string }).fullName ?? '';
+    } catch { /* ignore */ }
+    return '';
+  });
+  const [matricNumber, setMatricNumber] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('deptpay_saved_student');
+      if (raw) return (JSON.parse(raw) as { matricNumber: string }).matricNumber ?? '';
+    } catch { /* ignore */ }
+    return '';
+  });
+  const [phoneNumber, setPhoneNumber] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('deptpay_saved_student');
+      if (raw) return (JSON.parse(raw) as { phoneNumber: string }).phoneNumber ?? '';
+    } catch { /* ignore */ }
+    return '';
+  });
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -45,6 +64,18 @@ export const StudentPortal: React.FC = () => {
   const [searchedSubmissions, setSearchedSubmissions] = useState<Submission[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
+
+  // Remember Me State — initializes from localStorage so pill shows immediately without an effect
+  const [savedStudent, setSavedStudent] = useState<{ fullName: string; matricNumber: string; phoneNumber: string } | null>(() => {
+    try {
+      const raw = localStorage.getItem('deptpay_saved_student');
+      if (raw) {
+        const p = JSON.parse(raw) as { fullName: string; matricNumber: string; phoneNumber: string };
+        if (p.fullName && p.matricNumber) return p;
+      }
+    } catch { /* ignore */ }
+    return null;
+  });
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -92,6 +123,15 @@ export const StudentPortal: React.FC = () => {
       mounted = false;
     };
   }, []);
+
+  /** Clears saved student from localStorage and resets the welcome pill */
+  const clearSavedStudent = () => {
+    localStorage.removeItem('deptpay_saved_student');
+    setSavedStudent(null);
+    setFullName('');
+    setMatricNumber('');
+    setPhoneNumber('');
+  };
   
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
 
@@ -269,6 +309,15 @@ export const StudentPortal: React.FC = () => {
       const result = await submitReceipt(cId, name, matric, phone, file);
       setSubmittedSuccess(result);
       import('canvas-confetti').then((m) => m.default({ particleCount: 80, spread: 60, origin: { y: 0.6 } })).catch(() => {});
+
+      // Remember Me: persist student details for next visit
+      try {
+        const toSave = { fullName: name, matricNumber: matric, phoneNumber: phone };
+        localStorage.setItem('deptpay_saved_student', JSON.stringify(toSave));
+        setSavedStudent(toSave);
+      } catch {
+        // localStorage unavailable â€” not critical
+      }
       
       // Clear form
       setFullName('');
@@ -389,7 +438,7 @@ export const StudentPortal: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500">Status:</span>
                   <span className="font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full text-[11px]">
-                    🟡 Pending Verification
+                    ðŸŸ¡ Pending Verification
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -439,7 +488,7 @@ export const StudentPortal: React.FC = () => {
                     >
                       {campaigns.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.course_code ? `[${c.course_code}] ` : ''}{c.title} — ₦{c.amount.toLocaleString()}
+                          {c.course_code ? `[${c.course_code}] ` : ''}{c.title} â€” â‚¦{c.amount.toLocaleString()}
                         </option>
                       ))}
                     </select>
@@ -461,7 +510,7 @@ export const StudentPortal: React.FC = () => {
                         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">Transfer Details</span>
                       </div>
                       <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-black border border-emerald-500/30">
-                        ₦{selectedCampaign.amount.toLocaleString()}
+                        â‚¦{selectedCampaign.amount.toLocaleString()}
                       </span>
                     </div>
 
@@ -509,6 +558,27 @@ export const StudentPortal: React.FC = () => {
                     <h2 className="text-sm sm:text-base font-extrabold text-slate-900">2. Student & Receipt Details</h2>
                     <span className="text-[11px] text-slate-400 font-medium">Step 2 of 2</span>
                   </div>
+
+                  {/* Welcome Back Pill */}
+                  {savedStudent && (
+                    <div className="flex items-center justify-between gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <p className="text-xs font-semibold text-emerald-800 truncate">
+                          Welcome back, {savedStudent.fullName.split(' ')[0]}! 
+                          <span className="text-emerald-600 font-normal">Your details have been filled in.</span>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearSavedStudent}
+                        className="text-[11px] text-slate-500 hover:text-rose-600 font-semibold whitespace-nowrap shrink-0 cursor-pointer transition-colors"
+                        title="Clear saved info and start fresh"
+                      >
+                        Not you?
+                      </button>
+                    </div>
+                  )}
 
                   {/* Full Name: text-base on mobile avoids iOS Safari auto-zoom */}
                   <div>
@@ -577,7 +647,7 @@ export const StudentPortal: React.FC = () => {
                             {receiptFile?.name || 'Receipt Screenshot'}
                           </p>
                           <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
-                            {receiptFile?.size ? `${(receiptFile.size / 1024).toFixed(0)} KB • ` : ''}
+                            {receiptFile?.size ? `${(receiptFile.size / 1024).toFixed(0)} KB â€¢ ` : ''}
                             Ready for verification
                           </p>
                           <p className="text-[10px] sm:text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-1">
@@ -765,7 +835,7 @@ export const StudentPortal: React.FC = () => {
                         )}
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        <span className="font-semibold text-slate-700">{sub.full_name}</span> • {new Date(sub.created_at).toLocaleDateString('en-GB')}
+                        <span className="font-semibold text-slate-700">{sub.full_name}</span> â€¢ {new Date(sub.created_at).toLocaleDateString('en-GB')}
                       </p>
 
                       {sub.status === 'rejected' && sub.rejection_reason && (
