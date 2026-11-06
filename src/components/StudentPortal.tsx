@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   UploadCloud, 
   Check, 
@@ -13,7 +13,10 @@ import {
   Sparkles, 
   ArrowRight,
   Receipt,
-  FileCheck2
+  FileCheck2,
+  Image,
+  ClipboardPaste,
+  X
 } from 'lucide-react';
 import type { Campaign, Submission } from '../types';
 import { getCampaigns, submitReceipt, getSubmissionsByMatric } from '../lib/api';
@@ -29,6 +32,8 @@ export const StudentPortal: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedBank, setCopiedBank] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -98,18 +103,117 @@ export const StudentPortal: React.FC = () => {
     setTimeout(() => setCopiedBank(false), 1000);
   };
 
+  const handleImageSelection = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Please upload an image file (PNG, JPG, or WEBP)');
+      return;
+    }
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+    setReceiptFile(file);
+    setErrorMsg('');
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (!file.type.startsWith('image/')) {
-        setErrorMsg('Please upload an image file (PNG, JPG, or WEBP)');
-        return;
-      }
-      setReceiptFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setErrorMsg('');
+      handleImageSelection(e.target.files[0]);
+      e.target.value = '';
     }
   };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageSelection(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handlePasteButtonClick = async () => {
+    if (!navigator.clipboard?.read) {
+      showToast('Clipboard reading is not supported on this browser. Use Ctrl+V or select from gallery.', 'error');
+      return;
+    }
+
+    try {
+      const items = await navigator.clipboard.read();
+      let foundImage = false;
+
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const ext = imageType.split('/')[1] || 'png';
+          const file = new File([blob], `pasted_receipt_${Date.now()}.${ext}`, { type: imageType });
+          handleImageSelection(file);
+          foundImage = true;
+          showToast('Screenshot pasted from clipboard!', 'success');
+          break;
+        }
+      }
+
+      if (!foundImage) {
+        showToast('No screenshot found in clipboard. Take a screenshot or copy it first!', 'error');
+      }
+    } catch (err: unknown) {
+      console.warn('Clipboard read error:', err);
+      showToast('Clipboard permission was denied. Tap "Choose from Gallery" or press Ctrl+V.', 'error');
+    }
+  };
+
+  // Keyboard paste listener (e.g. Ctrl+V or Cmd+V)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        let hasImage = false;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.startsWith('image/')) {
+            hasImage = true;
+            break;
+          }
+        }
+        if (!hasImage) return; // Allow normal text paste
+      }
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            const ext = file.type.split('/')[1] || 'png';
+            const namedFile = new File([file], `pasted_receipt_${Date.now()}.${ext}`, { type: file.type });
+            handleImageSelection(namedFile);
+            showToast('Receipt screenshot pasted!', 'success');
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [handleImageSelection]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -452,46 +556,106 @@ export const StudentPortal: React.FC = () => {
 
                   {/* Receipt Upload Dropzone */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Upload Bank Receipt Screenshot <span className="text-rose-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Upload Bank Receipt Screenshot <span className="text-rose-500">*</span>
+                      </label>
+                      <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                        Tip: You can press Ctrl+V to paste
+                      </span>
+                    </div>
                     
                     {previewUrl ? (
-                      <div className="relative border-2 border-emerald-400 bg-emerald-50/20 rounded-xl p-3 flex items-center gap-3">
+                      <div className="relative border-2 border-emerald-400 bg-emerald-50/30 rounded-2xl p-3 sm:p-4 flex items-center gap-3.5 transition-all shadow-xs">
                         <img
                           src={previewUrl}
                           alt="Receipt preview"
-                          className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg border border-slate-200 shrink-0"
+                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-emerald-200/80 shadow-xs shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-800 truncate">{receiptFile?.name}</p>
-                          <p className="text-[10px] sm:text-[11px] text-emerald-700 flex items-center gap-1 mt-0.5">
-                            <Sparkles className="w-3 h-3 shrink-0" /> Auto-compressed for fast upload
+                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                            {receiptFile?.name || 'Receipt Screenshot'}
+                          </p>
+                          <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
+                            {receiptFile?.size ? `${(receiptFile.size / 1024).toFixed(0)} KB • ` : ''}
+                            Ready for verification
+                          </p>
+                          <p className="text-[10px] sm:text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-1">
+                            <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" /> Auto-compressed for fast upload
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => { setReceiptFile(null); setPreviewUrl(null); }}
-                          className="text-xs text-rose-600 hover:text-rose-800 font-bold px-2.5 py-1.5 bg-white rounded-lg border border-rose-200 hover:bg-rose-50 cursor-pointer shrink-0"
-                        >
-                          Change
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-xs text-slate-700 hover:text-slate-900 font-bold px-3 py-2 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (previewUrl) URL.revokeObjectURL(previewUrl);
+                              setReceiptFile(null);
+                              setPreviewUrl(null);
+                            }}
+                            className="text-xs text-rose-600 hover:text-rose-700 font-bold p-2 bg-rose-50/70 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
+                            title="Remove receipt"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <label className="border-2 border-dashed border-slate-300 hover:border-emerald-500 active:bg-emerald-50/40 bg-slate-50 rounded-xl p-5 sm:p-6 flex flex-col items-center justify-center cursor-pointer transition-all">
-                        <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2">
-                          <UploadCloud className="w-5 h-5" />
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={`border-2 border-dashed rounded-2xl p-4 sm:p-6 transition-all text-center flex flex-col items-center justify-center ${
+                          isDragging
+                            ? 'border-emerald-500 bg-emerald-50/60 shadow-inner'
+                            : 'border-slate-300 hover:border-emerald-400 bg-slate-50/80 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3 shadow-xs">
+                          <UploadCloud className="w-6 h-6" />
                         </div>
-                        <span className="text-xs sm:text-sm font-bold text-slate-800 text-center">Tap to select or take photo of receipt</span>
-                        <span className="text-[11px] text-slate-400 mt-0.5 text-center">JPG, PNG, or mobile screenshot</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                      </label>
+                        <p className="text-xs sm:text-sm font-bold text-slate-900">
+                          Upload your payment receipt screenshot
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5 mb-3.5 max-w-xs">
+                          Choose from gallery, snap a photo, or paste directly from clipboard
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-2 w-full max-w-sm justify-center">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 text-slate-700 hover:text-emerald-800 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                          >
+                            <Image className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>Choose from Gallery</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handlePasteButtonClick}
+                            className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                          >
+                            <ClipboardPaste className="w-4 h-4 shrink-0" />
+                            <span>Paste Screenshot</span>
+                          </button>
+                        </div>
+                      </div>
                     )}
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
                   </div>
 
                     {errorMsg && (
