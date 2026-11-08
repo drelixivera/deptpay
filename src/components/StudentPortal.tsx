@@ -286,7 +286,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ classSlug }) => {
     // 1. Check for existing submissions before uploading
     setIsSubmitting(true);
     try {
-      const existing = await getSubmissionsByMatric(matricNumber);
+        const existing = await getSubmissionsByMatric(matricNumber, classId);
       const campaignExisting = existing.filter(
         (s) => s.campaign_id === selectedCampaignId
       );
@@ -359,7 +359,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ classSlug }) => {
     setIsSearching(true);
     setSearchError('');
     try {
-      const results = await getSubmissionsByMatric(searchMatric.trim());
+         const results = await getSubmissionsByMatric(searchMatric.trim(), classId);
       setSearchedSubmissions(results);
     } catch (err: unknown) {
       console.error(err);

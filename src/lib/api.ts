@@ -181,7 +181,7 @@ export async function deleteCampaign(id: string): Promise<void> {
 // -----------------------------------------------------------------------------
 
 // Student-facing: fetch only *this* matric's submissions via the RPC.
-export async function getMySubmissions(matric: string): Promise<Submission[]> {
+export async function getMySubmissions(matric: string, classId: string): Promise<Submission[]> {
   const normalized = normalizeMatric(matric);
 
   if (!isSupabaseConfigured) {
@@ -196,11 +196,12 @@ export async function getMySubmissions(matric: string): Promise<Submission[]> {
 
   const { data, error } = await supabase.rpc('get_my_submissions', {
     p_matric: normalized,
+    p_class_id: classId, // <-- Must pass this!
   });
 
   if (error) throw error;
 
-  const camps = await getCampaigns();
+  const camps = await getCampaigns(classId);
   const campMap = new Map(camps.map(c => [c.id, c]));
 
   return (data || []).map((s: Submission) => ({
@@ -210,12 +211,12 @@ export async function getMySubmissions(matric: string): Promise<Submission[]> {
 }
 
 // Kept as a thin alias so StudentPortal's existing import keeps working.
-export async function getSubmissionsByMatric(matric: string): Promise<Submission[]> {
-  return getMySubmissions(matric);
+export async function getSubmissionsByMatric(matric: string, classId: string): Promise<Submission[]> {
+  return getMySubmissions(matric, classId);
 }
 
 // Rep-facing: fetch all submissions (or one campaign's worth).
-export async function getSubmissions(campaignId?: string): Promise<Submission[]> {
+export async function getSubmissions(campaignId?: string, classId?: string): Promise<Submission[]> {
   if (!isSupabaseConfigured) {
     const subs = getLocalSubmissions();
     const camps = getLocalCampaigns();
@@ -239,6 +240,10 @@ export async function getSubmissions(campaignId?: string): Promise<Submission[]>
       campaign:campaigns(*)
     `)
     .order('created_at', { ascending: false });
+
+  if (classId) {
+    query = query.eq('class_id', classId); // <-- Enforce class ID
+  }
 
   if (campaignId && campaignId !== 'all') {
     query = query.eq('campaign_id', campaignId);
@@ -360,7 +365,7 @@ export async function submitReceipt(
     throw insertError;
   }
 
-  const created = await getMySubmissions(cleanMatric);
+    const created = await getMySubmissions(cleanMatric, classId);
   const match = created.find(s => s.receipt_url === receiptUrl);
 
   if (!match) {

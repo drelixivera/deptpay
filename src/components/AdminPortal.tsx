@@ -107,12 +107,14 @@ export const AdminPortal: React.FC = () => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter]);
 
-  const loadData = async () => {
+      const loadData = async () => {
+    if (!repProfile?.class_id) return; // Guard clause
+    
     setLoading(true);
     try {
-      const [camps, subs] = await Promise.all([
-        getCampaigns(),
-        getSubmissions(lockedCampaignId),
+            const [camps, subs] = await Promise.all([
+        getCampaigns(repProfile.class_id),
+        getSubmissions(lockedCampaignId, repProfile.class_id), // <-- Pass class ID
       ]);
       setCampaigns(camps);
       setSubmissions(subs);
@@ -123,11 +125,13 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-  const handleRefresh = async () => {
+    const handleRefresh = async () => {
     setLoading(true);
     try {
+      if (!repProfile?.class_id) return;
+
       const [camps, subs] = await Promise.all([
-        getCampaigns(),
+        getCampaigns(repProfile.class_id), // <-- Add class ID here!
         getSubmissions(lockedCampaignId),
       ]);
       setCampaigns(camps);
@@ -315,7 +319,7 @@ export const AdminPortal: React.FC = () => {
 
   const pendingCount = submissions.filter((s) => s.status === 'pending').length;
   const approvedCount = submissions.filter((s) => s.status === 'approved').length;
-  const activeCampaignsCount = campaigns.filter((c) => c.is_active).length;
+    const activeCampaignsCount = campaigns.filter((c) => c.is_active && c.class_id === repProfile?.class_id).length;
 
   // Filtering & Pagination
   const filteredSubmissions = submissions.filter((s) => {
@@ -526,7 +530,7 @@ export const AdminPortal: React.FC = () => {
   // Campaign Lock Screen
   // ---------------------------------------------------------------------------
   if (isAuthenticated && !lockedCampaignId) {
-    const activeCampaigns = campaigns.filter(c => c.is_active);
+        const activeCampaigns = campaigns.filter(c => c.is_active && c.class_id === repProfile?.class_id);
 
     return (
       <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center px-4 py-8">
@@ -743,7 +747,10 @@ export const AdminPortal: React.FC = () => {
               {campaigns.find(c => c.id === lockedCampaignId)?.title || 'Loading...'}
             </div>
             <button
-              onClick={() => setLockedCampaignId('')}
+              onClick={() => {
+                setLockedCampaignId('');
+                setSubmissions([]); // <-- Clear old data
+              }}
               title="Switch to another payment item"
               className="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs shrink-0"
             >
