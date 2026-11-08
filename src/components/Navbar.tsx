@@ -9,13 +9,25 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange, classSlug }) => {
   
-  // Helper to turn "che-300l" into "CHE 300L"
+    // Helper to turn "che-300l" into "Chemical Engineering • 300L"
   const formatSlug = (slug: string) => {
     const parts = slug.split('-');
     if (parts.length >= 2) {
-      const dept = parts[0].toUpperCase();
+      const deptCode = parts[0].toLowerCase();
       const level = parts[1].toUpperCase();
-      return `${dept} ${level}`;
+      
+      const deptMap: Record<string, string> = {
+        'che': 'Chemical Engineering',
+        'mee': 'Mechanical Engineering',
+        'cve': 'Civil Engineering',
+        'eee': 'Electrical Engineering',
+        'ade': 'Agricultural Engineering',
+        'cpe': 'Computer Engineering',
+        // Add more LAUTECH departments as you onboard them
+      };
+
+      const deptName = deptMap[deptCode] || deptCode.toUpperCase();
+      return `${deptName} • ${level}`;
     }
     return slug.toUpperCase();
   };
@@ -29,7 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange, class
         <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300 shrink-0" />
         <span className="truncate">
           <span className="hidden sm:inline">DeptPay • Ladoke Akintola University of Technology (LAUTECH) </span>
-          <span>Chemical Engineering • {classDisplay}</span>
+          <span>{classDisplay}</span>
         </span>
       </div>
 
