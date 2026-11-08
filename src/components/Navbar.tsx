@@ -4,9 +4,24 @@ import { ShieldCheck, GraduationCap, Sparkles } from 'lucide-react';
 interface NavbarProps {
   currentView: 'student' | 'admin';
   onViewChange: (view: 'student' | 'admin') => void;
+  classSlug: string; // <-- Add this
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange, classSlug }) => {
+  
+  // Helper to turn "che-300l" into "CHE 300L"
+  const formatSlug = (slug: string) => {
+    const parts = slug.split('-');
+    if (parts.length >= 2) {
+      const dept = parts[0].toUpperCase();
+      const level = parts[1].toUpperCase();
+      return `${dept} ${level}`;
+    }
+    return slug.toUpperCase();
+  };
+
+  const classDisplay = formatSlug(classSlug);
+
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
       {/* Top micro-bar: responsive text */}
@@ -14,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => 
         <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300 shrink-0" />
         <span className="truncate">
           <span className="hidden sm:inline">DeptPay • Ladoke Akintola University of Technology (LAUTECH) </span>
-          <span>Chemical Engineering • CHE 300L</span>
+          <span>Chemical Engineering • {classDisplay}</span>
         </span>
       </div>
 
