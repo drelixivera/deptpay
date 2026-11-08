@@ -1,5 +1,18 @@
+export interface ClassInfo {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface Profile {
+  id: string;
+  class_id: string;
+  role: string;
+}
+
 export interface Campaign {
   id: string;
+  class_id: string; // <-- NEW
   title: string;
   course_code?: string;
   description?: string;
@@ -16,6 +29,7 @@ export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Submission {
   id: string;
+  class_id: string; // <-- NEW
   campaign_id: string;
   full_name: string;
   matric_number: string;

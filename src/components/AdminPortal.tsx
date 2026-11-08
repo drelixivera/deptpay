@@ -18,7 +18,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import type { Campaign, Submission, SubmissionStatus } from '../types';
+import type { Campaign, Submission, SubmissionStatus, Profile } from '../types';
 import {
   getCampaigns,
   getSubmissions,
@@ -29,6 +29,7 @@ import {
   getCurrentRep,
   toggleCampaignStatus,
   deleteCampaign,
+  getCurrentRepProfile,
 } from '../lib/api';
 import { exportSubmissionsToPDF } from '../lib/exportPdf';
 import { ReceiptModal } from './ReceiptModal';
@@ -44,6 +45,7 @@ export const AdminPortal: React.FC = () => {
   
   // Campaign Lock State
   const [lockedCampaignId, setLockedCampaignId] = useState<string>('');
+  const [repProfile, setRepProfile] = useState<Profile | null>(null);
 
   // Data state
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -70,17 +72,27 @@ export const AdminPortal: React.FC = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // On mount: check session
+  // On mount: check session and get profile
   useEffect(() => {
     getCurrentRep()
-      .then((user) => setIsAuthenticated(!!user))
+      .then(async (user) => {
+        if (user) {
+          setIsAuthenticated(true);
+          const profile = await getCurrentRepProfile(); // <-- Fetch the Rep's class
+          setRepProfile(profile);
+        }
+      })
       .finally(() => setAuthLoading(false));
   }, []);
 
-  // Load campaigns on mount
+  // Load campaigns on mount (only if we know the rep's class)
   useEffect(() => {
-    getCampaigns().then(setCampaigns).catch(console.error);
-  }, []);
+    if (repProfile?.class_id) {
+      getCampaigns(repProfile.class_id) // <-- Pass the class ID
+        .then(setCampaigns)
+        .catch(console.error);
+    }
+  }, [repProfile]);
 
   // Load data when lockedCampaignId changes
   useEffect(() => {
@@ -141,6 +153,8 @@ export const AdminPortal: React.FC = () => {
     try {
       await signInRep(email.trim(), password);
       setIsAuthenticated(true);
+      const profile = await getCurrentRepProfile();
+      setRepProfile(profile);
     } catch (err: any) {
       if (err.message === 'Failed to fetch' || err.message?.includes('fetch')) {
         setLoginError('Network error. Please check your internet connection and try again.');
@@ -155,7 +169,8 @@ export const AdminPortal: React.FC = () => {
   const handleLogout = async () => {
     await signOutRep();
     setIsAuthenticated(false);
-    setLockedCampaignId(''); // Reset the lock
+    setLockedCampaignId('');
+    setRepProfile(null); // <-- Clear profile
     setSubmissions([]);
     setCampaigns([]);
   };
@@ -206,7 +221,7 @@ export const AdminPortal: React.FC = () => {
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle || !newAmount || !newAccountNum || !newAccountName) return;
+    if (!newTitle || !newAmount || !newAccountNum || !newAccountName || !repProfile) return;
 
     setIsCreatingCampaign(true);
     try {
@@ -219,6 +234,7 @@ export const AdminPortal: React.FC = () => {
         account_number: newAccountNum,
         account_name: newAccountName,
         is_active: true,
+        class_id: repProfile.class_id, // <-- Link to the Rep's class!
       });
 
       setCampaigns([created, ...campaigns]);

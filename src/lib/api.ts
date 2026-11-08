@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Campaign, Submission, SubmissionStatus } from '../types';
+import type { Campaign, Submission, SubmissionStatus, Profile } from '../types';
 import { INITIAL_CAMPAIGNS, INITIAL_SUBMISSIONS } from './mockData';
 
 const LOCAL_STORAGE_KEY_CAMPAIGNS = 'deptpay_campaigns_v1';
@@ -44,6 +44,25 @@ export async function getCurrentRep() {
   return data.user ?? null;
 }
 
+export async function getCurrentRepProfile(): Promise<Profile | null> {
+  if (!isSupabaseConfigured) return null;
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching rep profile:', error);
+    return null;
+  }
+  return data;
+}
+
 // -----------------------------------------------------------------------------
 // Demo-mode (localStorage) helpers
 // -----------------------------------------------------------------------------
@@ -78,20 +97,25 @@ function saveLocalCampaigns(camps: Campaign[]) {
 // Campaigns
 // -----------------------------------------------------------------------------
 
-export async function getCampaigns(): Promise<Campaign[]> {
+export async function getCampaigns(classId?: string): Promise<Campaign[]> {
   if (!isSupabaseConfigured) {
     return getLocalCampaigns();
   }
   
-  const { data, error } = await supabase
+  let query = supabase
     .from('campaigns')
     .select('*')
     .order('created_at', { ascending: false });
 
+  // If a classId is provided, filter by it!
+  if (classId) {
+    query = query.eq('class_id', classId);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
     console.error('Error fetching campaigns from Supabase:', error);
-    // REMOVED the fallback to getLocalCampaigns() here. 
-    // If the network is down, throw an error so the UI can handle it.
     throw new Error('Could not load campaigns. Please check your internet connection.');
   }
   return data || [];
@@ -235,6 +259,7 @@ export async function getSubmissions(campaignId?: string): Promise<Submission[]>
 
 export async function submitReceipt(
   campaignId: string,
+  classId: string, // <-- NEW PARAMETER
   fullName: string,
   matricNumber: string,
   phoneNumber: string,
@@ -278,6 +303,7 @@ export async function submitReceipt(
 
     const newSub: Submission = {
       id: 'sub-' + Date.now(),
+      class_id: classId, // <-- ADDED FOR DEMO MODE
       campaign_id: campaignId,
       full_name: fullName.trim(),
       matric_number: cleanMatric,
@@ -313,6 +339,7 @@ export async function submitReceipt(
     .insert([
       {
         campaign_id: campaignId,
+        class_id: classId, // <-- ADDED FOR LIVE SUPABASE
         full_name: fullName.trim(),
         matric_number: cleanMatric,
         phone_number: phoneNumber.trim(),

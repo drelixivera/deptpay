@@ -21,12 +21,19 @@ import {
 } from 'lucide-react';
 import type { Campaign, Submission } from '../types';
 import { getCampaigns, submitReceipt, getSubmissionsByMatric } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
-export const StudentPortal: React.FC = () => {
+interface StudentPortalProps {
+  classSlug: string;
+}
+
+export const StudentPortal: React.FC<StudentPortalProps> = ({ classSlug }) => {
   const [activeTab, setActiveTab] = useState<'submit' | 'status'>('submit');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
   const [loading, setLoading] = useState(navigator.onLine);
+  const [classId, setClassId] = useState<string>('');
+
   // Remember Me: lazy-initialize form fields from localStorage (no effect needed)
   const [fullName, setFullName] = useState<string>(() => {
     try {
@@ -84,45 +91,57 @@ export const StudentPortal: React.FC = () => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
-  
-  const loadCampaigns = async () => {
-    setLoading(true);
-    try {
-      const data = await getCampaigns();
-      setNetworkError(false);
-      const active = data.filter(c => c.is_active);
-      setCampaigns(active);
-      setSelectedCampaignId(prev => prev || (active.length > 0 ? active[0].id : ''));
-    } catch (err) {
-      console.error(err);
-      setNetworkError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
 
+  // Fetch class_id from slug, then load campaigns
   useEffect(() => {
     let mounted = true;
-    getCampaigns()
-      .then((data) => {
+    
+    if (!navigator.onLine) {
+      setNetworkError(true);
+      setLoading(false);
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        // 1. Look up the class ID from the URL slug
+        const { data: classData, error: classError } = await supabase
+          .from('classes')
+          .select('id')
+          .eq('slug', classSlug)
+          .single();
+
+        if (classError || !classData) {
+          console.error('Class not found for slug:', classSlug);
+          if (mounted) setNetworkError(true);
+          return;
+        }
+
+        const fetchedClassId = classData.id;
+        if (mounted) setClassId(fetchedClassId);
+
+        // 2. Load campaigns for that specific class
+        const data = await getCampaigns(fetchedClassId);
         if (!mounted) return;
+        
         const active = data.filter((c) => c.is_active);
         setCampaigns(active);
         setSelectedCampaignId((prev) => prev || (active.length > 0 ? active[0].id : ''));
         setNetworkError(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error(err);
         if (mounted) setNetworkError(true);
-      })
-      .finally(() => {
+      } finally {
         if (mounted) setLoading(false);
-      });
+      }
+    };
+
+    loadData();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [classSlug]);
 
   /** Clears saved student from localStorage and resets the welcome pill */
   const clearSavedStudent = () => {
@@ -289,7 +308,7 @@ export const StudentPortal: React.FC = () => {
       }
 
       // 2. Either no previous submission or previous was rejected (re-upload)
-      await executeSubmission(selectedCampaignId, fullName, matricNumber, phoneNumber, receiptFile);
+      await executeSubmission(selectedCampaignId, classId, fullName, matricNumber, phoneNumber, receiptFile);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not check existing submissions. Please try again.');
       setIsSubmitting(false);
@@ -299,6 +318,7 @@ export const StudentPortal: React.FC = () => {
   // We extract the actual submission logic into its own function
   const executeSubmission = async (
     cId: string,
+    classId: string,
     name: string,
     matric: string,
     phone: string,
@@ -306,7 +326,7 @@ export const StudentPortal: React.FC = () => {
   ) => {
     setIsSubmitting(true);
     try {
-      const result = await submitReceipt(cId, name, matric, phone, file);
+      const result = await submitReceipt(cId, classId, name, matric, phone, file);
       setSubmittedSuccess(result);
       import('canvas-confetti').then((m) => m.default({ particleCount: 80, spread: 60, origin: { y: 0.6 } })).catch(() => {});
 
@@ -316,7 +336,7 @@ export const StudentPortal: React.FC = () => {
         localStorage.setItem('deptpay_saved_student', JSON.stringify(toSave));
         setSavedStudent(toSave);
       } catch {
-        // localStorage unavailable â€” not critical
+        // localStorage unavailable — not critical
       }
       
       // Clear form
@@ -367,10 +387,7 @@ export const StudentPortal: React.FC = () => {
           We couldn't connect to the database to load the payment items. Please check your internet connection and try again.
         </p>
         <button
-          onClick={() => {
-            setLoading(true);
-            loadCampaigns();
-          }}
+          onClick={() => window.location.reload()}
           className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
         >
           Try again

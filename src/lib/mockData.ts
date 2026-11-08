@@ -3,6 +3,7 @@ import type { Campaign, Submission } from '../types';
 export const INITIAL_CAMPAIGNS: Campaign[] = [
   {
     id: 'camp-1',
+    class_id: '11111111-1111-1111-1111-111111111111',
     title: 'CHE 301 Reaction Kinetics Manual',
     course_code: 'CHE 301',
     description: 'First semester laboratory manual and practical problem sheets.',
@@ -16,6 +17,7 @@ export const INITIAL_CAMPAIGNS: Campaign[] = [
   },
   {
     id: 'camp-2',
+    class_id: '11111111-1111-1111-1111-111111111111',
     title: 'CHE 305 Transport Phenomena Handout',
     course_code: 'CHE 305',
     description: 'Hardcopy lecture compilation by Engr. Dr. Oladipo.',
@@ -29,6 +31,7 @@ export const INITIAL_CAMPAIGNS: Campaign[] = [
   },
   {
     id: 'camp-3',
+    class_id: '11111111-1111-1111-1111-111111111111',
     title: 'ChES Departmental Dues 2026/2027',
     course_code: 'ChES',
     description: 'Chemical Engineering Students Association annual package.',
@@ -45,6 +48,7 @@ export const INITIAL_CAMPAIGNS: Campaign[] = [
 export const INITIAL_SUBMISSIONS: Submission[] = [
   {
     id: 'sub-1',
+    class_id: '11111111-1111-1111-1111-111111111111',
     campaign_id: 'camp-1',
     full_name: 'Adewale Ibrahim Segun',
     matric_number: '20/4102',
@@ -56,6 +60,7 @@ export const INITIAL_SUBMISSIONS: Submission[] = [
   },
   {
     id: 'sub-2',
+    class_id: '11111111-1111-1111-1111-111111111111',
     campaign_id: 'camp-1',
     full_name: 'Okafor Chiamaka Blessing',
     matric_number: '20/4155',
@@ -66,6 +71,7 @@ export const INITIAL_SUBMISSIONS: Submission[] = [
   },
   {
     id: 'sub-3',
+    class_id: '11111111-1111-1111-1111-111111111111',
     campaign_id: 'camp-1',
     full_name: 'Bello Farouk Ayomide',
     matric_number: '20/4098',
@@ -78,6 +84,7 @@ export const INITIAL_SUBMISSIONS: Submission[] = [
   },
   {
     id: 'sub-4',
+    class_id: '11111111-1111-1111-1111-111111111111',
     campaign_id: 'camp-2',
     full_name: 'Adewale Ibrahim Segun',
     matric_number: '20/4102',
@@ -89,6 +96,7 @@ export const INITIAL_SUBMISSIONS: Submission[] = [
   },
   {
     id: 'sub-5',
+    class_id: '11111111-1111-1111-1111-111111111111',
     campaign_id: 'camp-1',
     full_name: 'Yusuf Zainab Omolara',
     matric_number: '20/4210',
