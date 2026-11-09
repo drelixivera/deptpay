@@ -97,7 +97,7 @@ const AppContent = () => {
             </p>
           </div>
           <div className="text-slate-400 font-medium">
-            Built for Students, By Students
+            Built for Students, By Ojo Daniel Oluwaseunfunmi
           </div>
         </div>
       </footer>
