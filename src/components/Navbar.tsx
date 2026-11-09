@@ -18,7 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange, class
         <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300 shrink-0" />
         <span className="truncate">
           <span className="hidden sm:inline">DeptPay • Ladoke Akintola University of Technology (LAUTECH) </span>
-          <span>Chemical Engineering • {classDisplay}</span>
+          <span>{classDisplay}</span>
         </span>
       </div>
 
