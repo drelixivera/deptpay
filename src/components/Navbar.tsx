@@ -1,39 +1,16 @@
 import React from 'react';
 import { ShieldCheck, GraduationCap, Sparkles } from 'lucide-react';
+import { formatClassSlug } from '../lib/utils'; // <-- Import the helper
 
 interface NavbarProps {
   currentView: 'student' | 'admin';
   onViewChange: (view: 'student' | 'admin') => void;
-  classSlug: string; // <-- Add this
+  classSlug: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange, classSlug }) => {
+  const classDisplay = formatClassSlug(classSlug); // <-- Use the helper
   
-    // Helper to turn "che-300l" into "Chemical Engineering • 300L"
-  const formatSlug = (slug: string) => {
-    const parts = slug.split('-');
-    if (parts.length >= 2) {
-      const deptCode = parts[0].toLowerCase();
-      const level = parts[1].toUpperCase();
-      
-      const deptMap: Record<string, string> = {
-        'che': 'Chemical Engineering',
-        'mee': 'Mechanical Engineering',
-        'cve': 'Civil Engineering',
-        'eee': 'Electrical Engineering',
-        'ade': 'Agricultural Engineering',
-        'cpe': 'Computer Engineering',
-        // Add more LAUTECH departments as you onboard them
-      };
-
-      const deptName = deptMap[deptCode] || deptCode.toUpperCase();
-      return `${deptName} • ${level}`;
-    }
-    return slug.toUpperCase();
-  };
-
-  const classDisplay = formatSlug(classSlug);
-
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
       {/* Top micro-bar: responsive text */}

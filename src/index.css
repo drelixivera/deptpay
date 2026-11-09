@@ -12,3 +12,10 @@
     min-height: 100vh;
   }
 }
+
+@keyframes fill-bar {
+  0% { width: 0%; }
+  40% { width: 45%; }
+  70% { width: 65%; }
+  100% { width: 100%; }
+}

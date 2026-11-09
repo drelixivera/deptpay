@@ -1,50 +1,48 @@
 import React from 'react';
+import { formatClassSlug } from '../lib/utils'; // <-- Import the helper
 
 interface SplashScreenProps {
   fadeOut?: boolean;
+  classSlug: string;
 }
 
-export const SplashScreen: React.FC<SplashScreenProps> = ({ fadeOut }) => {
+export const SplashScreen: React.FC<SplashScreenProps> = ({ fadeOut, classSlug }) => {
   return (
     <div 
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 text-white transition-opacity duration-500 ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0f172a] text-white transition-opacity duration-700 ease-in-out ${
         fadeOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
-      {/* Background ambient glow */}
-      <div className="absolute w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
-
-      {/* Spinning Ring & Logo Container */}
-      <div className="relative flex items-center justify-center mb-6">
-        {/* Outer Animated Spinning Ring */}
-        <div className="w-28 h-28 rounded-full border-3 border-emerald-500/20 border-t-emerald-400 animate-spin"></div>
+      <div className="flex flex-col items-center justify-center px-6 w-full max-w-sm">
         
-        {/* Center LAUTECH Official Crest */}
-        <div className="absolute w-20 h-20 rounded-full bg-white p-2.5 flex items-center justify-center shadow-xl shadow-emerald-500/25 border border-slate-700/50">
+        {/* Logo */}
+        <div className="w-20 h-20 rounded-2xl bg-white p-3 flex items-center justify-center shadow-2xl shadow-emerald-500/10 mb-6 animate-in zoom-in-95 duration-700 ease-out fill-mode-both">
           <img 
             src="/lautech-logo.png" 
             alt="LAUTECH Crest" 
-            className="w-full h-full object-contain animate-pulse duration-1000" 
+            className="w-full h-full object-contain" 
           />
         </div>
-      </div>
 
-      {/* Brand Title */}
-      <div className="text-center space-y-1.5 px-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+        {/* Brand Text */}
+        <h1 className="text-3xl font-black tracking-tight text-white mb-2 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-200 fill-mode-both">
           Dept<span className="text-emerald-400">Pay</span>
         </h1>
-        <p className="text-xs font-semibold text-emerald-300/90 tracking-wide uppercase">
-          Chemical Engineering • 300 Level
+        
+        <p className="text-[10px] font-bold text-slate-400 tracking-[0.2em] uppercase mb-10 animate-in fade-in duration-700 delay-300 fill-mode-both">
+          Secure Payment Portal
         </p>
-        <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-          Ladoke Akintola University of Technology (LAUTECH)
-        </p>
-      </div>
 
-      {/* Subtle loader bar at bottom */}
-      <div className="w-36 h-1 bg-slate-800 rounded-full mt-8 overflow-hidden relative">
-        <div className="w-1/2 h-full bg-gradient-to-r from-emerald-500 to-teal-300 rounded-full absolute animate-[loader_1.2s_ease-in-out_infinite]"></div>
+        {/* Loading Bar Container */}
+        <div className="w-full max-w-[200px] h-1.5 bg-slate-800 rounded-full overflow-hidden relative mb-4 animate-in fade-in duration-500 delay-500 fill-mode-both">
+          {/* The Filling Bar */}
+          <div className="absolute top-0 left-0 h-full bg-emerald-500 rounded-full animate-[fill-bar_2s_ease-in-out_forwards]" />
+        </div>
+
+        {/* Dynamic Subtitle (Appears as bar fills) */}
+        <p className="text-xs font-semibold text-emerald-300/80 tracking-widest uppercase animate-in fade-in duration-1000 delay-1000 fill-mode-both">
+          {formatClassSlug(classSlug)} {/* <-- Use the helper here */}
+        </p>
       </div>
     </div>
   );

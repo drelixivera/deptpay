@@ -26,21 +26,21 @@ const AppContent = () => {
   const pathParts = location.pathname.split('/');
   const currentSlug = pathParts[1] || 'che-300l';
 
-  useEffect(() => {
+    useEffect(() => {
     const timer = setTimeout(() => {
       setSplashFade(true);
       const closeTimer = setTimeout(() => {
         setShowSplash(false);
-      }, 500);
+      }, 800); // Slower fade out
       return () => clearTimeout(closeTimer);
-    }, 900);
+    }, 2500); // <-- Change 900 to 2500
 
     return () => clearTimeout(timer);
   }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 selection:bg-emerald-500 selection:text-white">
-      {showSplash && <SplashScreen fadeOut={splashFade} />}
+      {showSplash && <SplashScreen fadeOut={splashFade} classSlug={currentSlug} />}
 
       {/* Pass the slug to the Navbar */}
       <Navbar 
