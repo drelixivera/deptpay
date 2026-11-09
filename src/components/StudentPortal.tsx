@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { Campaign, Submission } from '../types';
 import { getCampaigns, submitReceipt, getSubmissionsByMatric } from '../lib/api';
+import { getDepartmentName } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 
 interface StudentPortalProps {
@@ -401,7 +402,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ classSlug }) => {
       {/* Header & Tabs */}
       <div className="text-center mb-5 sm:mb-8">
         <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-          Chemical Engineering Departmental Payments
+          {getDepartmentName(classSlug)} Departmental Payments
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 mt-1.5 sm:mt-2 max-w-xl mx-auto px-2">
           Make your bank transfer, submit required details here, and get verified
