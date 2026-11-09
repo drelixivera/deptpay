@@ -5,6 +5,7 @@ import { Navbar } from './components/Navbar';
 import { StudentPortal } from './components/StudentPortal';
 import { SplashScreen } from './components/SplashScreen';
 import { isSupabaseConfigured } from './lib/supabase';
+import { formatClassSlug } from './lib/utils';
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(m => ({ default: m.AdminPortal })));
 
@@ -37,6 +38,12 @@ const AppContent = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+// Update the document title whenever the class changes
+  useEffect(() => {
+    const titleString = formatClassSlug(currentSlug);
+    document.title = `DeptPay | ${titleString}`;
+  }, [currentSlug]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 selection:bg-emerald-500 selection:text-white">
