@@ -5,7 +5,7 @@ import { Navbar } from './components/Navbar';
 import { StudentPortal } from './components/StudentPortal';
 import { SplashScreen } from './components/SplashScreen';
 import { isSupabaseConfigured } from './lib/supabase';
-import { formatClassSlug } from './lib/utils';
+import { formatClassSlug, getClassInfoForMeta } from './lib/utils';
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(m => ({ default: m.AdminPortal })));
 
@@ -39,10 +39,24 @@ const AppContent = () => {
     return () => clearTimeout(timer);
   }, []);
 
-// Update the document title whenever the class changes
+    // Update document title and standard meta description dynamically
   useEffect(() => {
     const titleString = formatClassSlug(currentSlug);
+    const { deptName, level } = getClassInfoForMeta(currentSlug);
+    
+    // 1. Update the document title
     document.title = `DeptPay | ${titleString}`;
+
+    // 2. Update the standard meta description
+    const description = `The official payment portal for ${deptName} ${level} Level at LAUTECH. Upload your receipts, track your payment status, and get verified instantly.`;
+    
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', description);
   }, [currentSlug]);
 
   return (

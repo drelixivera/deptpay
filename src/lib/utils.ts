@@ -41,3 +41,25 @@ export const getDepartmentName = (slug: string) => {
   }
   return 'Chemical Engineering'; // fallback
 };
+
+export const getClassInfoForMeta = (slug: string) => {
+  const parts = slug.split('-');
+  if (parts.length >= 2) {
+    const deptCode = parts[0].toLowerCase();
+    const level = parts[1].replace('l', '');
+    
+    const deptMap: Record<string, string> = {
+      'che': 'Chemical Engineering',
+      'mee': 'Mechanical Engineering',
+      'cve': 'Civil Engineering',
+      'eee': 'Electrical/Electronics Engineering',
+      'ade': 'Agricultural Engineering',
+      'cpe': 'Computer Engineering',
+      'fst': 'Food Science & Technology',
+    };
+    
+    const deptName = deptMap[deptCode] || deptCode.toUpperCase();
+    return { deptName, level };
+  }
+  return { deptName: 'Chemical Engineering', level: '300' };
+};
