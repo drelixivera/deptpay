@@ -110,9 +110,6 @@ const AppContent = () => {
               Ladoke Akintola University of Technology (LAUTECH), Ogbomoso
             </p>
           </div>
-          <div className="text-slate-400 font-medium">
-            Built for Students, By Ojo Daniel Oluwaseunfunmi
-          </div>
         </div>
       </footer>
       <Analytics/>
